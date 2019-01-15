@@ -298,39 +298,39 @@ module LambdaCat
   (*-------------------------------------------------*)
 
   let id () =
-    failwith "Student! This is your job!"
+    fun a -> a
 
   let compose () () () f g =
-    failwith "Student! This is your job!"
+    fun a -> f (g a)
 
   let pair () () () () f g =
-    failwith "Student! This is your job!"
+    fun (a,b) -> (f a, g b)
 
   let exl () () (x, y) =
-    failwith "Student! This is your job!"
+    x
 
   let exr () () (x, y) =
-    failwith "Student! This is your job!"
+    y
 
   let dup () x =
-    failwith "Student! This is your job!"
+    (x, x)
 
   let apply () () (f, x) =
-    failwith "Student! This is your job!"
+    f x
 
   let curry () () () f =
-    failwith "Student! This is your job!"
+    fun a b -> f (a,b)
 
   let uncurry () () () f =
-    failwith "Student! This is your job!"
+    fun (a,b) -> f a b
 
   (** STLC has a terminal object. *)
   let it () x =
-    failwith "Student! This is your job!"
+    ()
 
   (** STLC has constant arrows. *)
   let unit_arrow () x =
-    failwith "Student! This is your job!"
+    fun _ -> x
 
   let ok_unit = ()
 
@@ -524,11 +524,11 @@ end
   (*             Then, run `make -C tests/task-1`.   *)
   (*-------------------------------------------------*)
 
-  let ok_pair (type a b) (oka : a ok) (okb : b ok) : (a * b) ok =
-    failwith "Student! This is your job!"
+  let ok_pair (type a b) (oka : a ok) (okb : b ok) : ((a * b) ok) =
+    AdditivePair(oka)(okb)
 
   let id oka =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun a -> a)
 
   let compose oka okb okc (AdditiveFun f) (AdditiveFun g) =
     failwith "Student! This is your job!"
