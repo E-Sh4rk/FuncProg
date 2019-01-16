@@ -524,8 +524,10 @@ end
   (*             Then, run `make -C tests/task-1`.   *)
   (*-------------------------------------------------*)
 
-  let ok_pair (type a b) (oka : a ok) (okb : b ok) : ((a * b) ok) =
-    AdditivePair(oka)(okb)
+  let ok_pair (type a b) (oka : a ok) (okb : b ok) : (a * b) ok =
+    let module A = (val oka) in 
+    let module B = (val okb) in 
+    (module AdditivePair(A)(B))
 
   let id oka =
     AdditiveFun (fun a -> a)
