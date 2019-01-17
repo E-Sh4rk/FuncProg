@@ -806,10 +806,16 @@ end
   (*-------------------------------------------------*)
 
   let ok_pair (type a b) (oka : a ok) (okb : b ok) : (a * b) ok =
-    failwith "Student! This is your job!"
+    let (oka1, oka2) = oka in
+    let (okb1, okb2) = okb in
+    let module A = (val oka1) in 
+    let module B = (val okb1) in
+    let c = C.ok_pair oka2 okb2 in
+    ((module AdditivePair(A)(B)), c)
 
   let id oka =
-    failwith "Student! This is your job!"
+    let (_, oka) = oka in
+    D (fun x -> (x, C.id oka))
 
   let compose oka okb okc (D g) (D f) =
     failwith "Student! This is your job!"
