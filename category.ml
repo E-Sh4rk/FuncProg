@@ -533,52 +533,54 @@ end
     AdditiveFun (fun a -> a)
 
   let compose oka okb okc (AdditiveFun f) (AdditiveFun g) =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun a ->  f (g a))
 
   let pair oka okb okc okd (AdditiveFun f) (AdditiveFun g) =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun (a,b) -> (f a, g b))
 
   let exl oka okb =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun (a,_) -> a)
 
   let exr oka okb =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun (_,b) -> b)
 
   let dup oka =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun a -> (a,a))
 
   let inl (type a b) (oka : a ok) (okb : b ok) =
-    failwith "Student! This is your job!"
+    AdditiveFun (inlF okb)
 
   let inr (type a b) (oka : a ok) (okb : b ok) =
-    failwith "Student! This is your job!"
+    AdditiveFun (inrF oka)
 
   let jam (type a) (oka : a ok) =
-    failwith "Student! This is your job!"
+    AdditiveFun (jamF oka)
 
   let ti (type a) (module AddA : Additive with type t = a) =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun _ -> AddA.zero)
 
   let it (type a) (module AddA : Additive with type t = a) =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun _ -> ())
 
   let unit_arrow (type a) (module AddA : Additive with type t = a) x =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun _ -> x)
 
   let ok_unit : unit ok =
-    failwith "Student! This is your job!"
+    (module AdditiveUnit)
 
   let apply oka okb =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun (f, a) -> f a)
 
   let curry oka okb okc (AdditiveFun f) =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun a b -> f (a,b))
 
   let uncurry oka okb okc (AdditiveFun f) =
-    failwith "Student! This is your job!"
+    AdditiveFun (fun (a,b) -> f a b)
 
-  let ok_arrow (type a b) oka okb =
-    failwith "Student! This is your job!"
+  let ok_arrow (type a b) (oka : a ok) (okb : b ok) : (a -> b) ok =
+    let module A = (val oka) in 
+    let module B = (val okb) in 
+    (module AdditiveLambda(A)(B))
 
 end
 
