@@ -539,10 +539,10 @@ end
     AdditiveFun (fun (a,b) -> (f a, g b))
 
   let exl oka okb =
-    AdditiveFun (fun (a,_) -> a)
+    AdditiveFun fst
 
   let exr oka okb =
-    AdditiveFun (fun (_,b) -> b)
+    AdditiveFun snd
 
   let dup oka =
     AdditiveFun (fun a -> (a,a))
@@ -814,36 +814,43 @@ end
     ((module AdditivePair(A)(B)), c)
 
   let id oka =
-    let (_, oka) = oka in
-    D (fun x -> (x, C.id oka))
+    D (fun x -> (x, C.id (snd oka)))
 
   let compose oka okb okc (D g) (D f) =
-    failwith "Student! This is your job!"
+    D (fun a ->
+      let (b,f') = f a in
+      let (c,g') = g b in
+      (c, C.compose (snd oka) (snd okb) (snd okc) g' f')
+    )
 
   let pair
     : type a b c d.
       a ok -> b ok -> c ok -> d ok ->
       (a, c) k -> (b, d) k -> (a * b, c * d) k
     = fun oka okb okc okd (D f) (D g) ->
-    failwith "Student! This is your job!"
+    D (fun (a,b) ->
+      let (c,f') = f a in
+      let (d,g') = g b in
+      ((c,d), C.pair (snd oka) (snd okb) (snd okc) (snd okd) f' g')
+    )
 
   let exl oka okb =
-    failwith "Student! This is your job!"
+    linearD fst (C.exl (snd oka) (snd okb))
 
   let dup oka =
-    failwith "Student! This is your job!"
+    linearD (fun x -> (x,x)) (C.dup (snd oka))
 
   let exr oka okb =
-    failwith "Student! This is your job!"
+    linearD snd (C.exr (snd oka) (snd okb))
 
   let inl oka okb =
-    failwith "Student! This is your job!"
+    linearD (inlF (fst okb)) (C.inl (snd oka) (snd okb))
 
   let inr oka okb =
-    failwith "Student! This is your job!"
+    linearD (inrF (fst oka)) (C.inr (snd oka) (snd okb))
 
   let jam oka =
-    failwith "Student! This is your job!"
+    linearD (jamF (fst oka)) (C.jam (snd oka))
 
   let ti (type a) (((module AddA), coka) : a ok) : (unit, a) k =
     failwith "Student! This is your job!"
