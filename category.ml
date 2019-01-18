@@ -853,13 +853,13 @@ end
     linearD (jamF (fst oka)) (C.jam (snd oka))
 
   let ti (type a) (((module AddA), coka) : a ok) : (unit, a) k =
-    failwith "Student! This is your job!"
+    D (fun () -> (AddA.zero, C.ti coka))
 
   let it (type a) (oka : a ok) : (a, unit) k =
-    failwith "Student! This is your job!"
+    D (fun a -> ((), C.it (snd oka)))
 
   let unit_arrow (type a) (oka : a ok) x : (unit, a) k =
-    failwith "Student! This is your job!"
+    D (fun () -> (x, C.unit_arrow (snd oka) x))
 
    let ok_unit =
      ((module AdditiveUnit : Additive with type t = unit), C.ok_unit)
@@ -957,7 +957,7 @@ end
   (*             Then, run `make -C tests/task-1`.   *)
   (*-------------------------------------------------*)
 
-  let todo = D (fun _ -> failwith "Students! This is your job!")
+  let todo = D (fun _ -> flush_all () ; failwith "Students! This is your job!")
 
   let negC =
     todo
