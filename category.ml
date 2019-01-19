@@ -965,25 +965,30 @@ end
   let addC =
     linearD (fun (x,y) -> C.Num.add x y) C.addC
 
+  let nablaC x y =
+    C.compose (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) C.ok_t (C.jam C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y)
+
+  let deltaC x y =
+    C.compose C.ok_t (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y) (C.dup C.ok_t)
+
   let mulC =
     D (fun (x,y) ->
       let scale_x = C.scale x in
       let scale_y = C.scale y in
-      let nabla x y = C.compose (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) C.ok_t (C.jam C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y) in
-      (C.Num.mul x y, nabla scale_y scale_x)
+      (C.Num.mul x y, nablaC scale_y scale_x)
     )
 
   let sinC =
-    todo
+    D (fun a -> (Floating.sin a, C.scale (Floating.cos a)))
 
   let cosC =
-    todo
+    D (fun a -> (Floating.cos a, C.scale (C.Num.neg (Floating.sin a))))
 
   let expC =
-    todo
+    D (fun a -> let e = Floating.exp a in (e, C.scale e))
 
   let invC =
-    todo
+    D (fun a -> (Floating.inv a, C.scale (C.Num.neg (Floating.inv (C.Num.mul a a)))))
 
 end
 
