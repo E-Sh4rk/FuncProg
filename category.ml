@@ -1097,13 +1097,13 @@ end
   let ok_unit = C.ok_unit
 
   let ti oka =
-    failwith "Students! This is your job!"
+    cont C.ok_unit oka (C.ti oka)
 
   let it oka =
-    failwith "Students! This is your job!"
+    cont oka C.ok_unit (C.it oka)
 
   let unit_arrow (type a) (oka : a ok) (x : a) : (unit, a) k =
-    failwith "Students! This is your job!"
+    cont C.ok_unit oka (C.unit_arrow oka x)
 
 end
 
@@ -1134,7 +1134,7 @@ struct
   include ContinuationCategoryTransformer (C) (R)
   type t = C.t
   let scale s =
-    failwith "Students! This is your job!"
+    cont C.ok_t C.ok_t (C.scale s)
 end
 
 (**
