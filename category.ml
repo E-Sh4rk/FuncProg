@@ -957,16 +957,21 @@ end
   (*             Then, run `make -C tests/task-1`.   *)
   (*-------------------------------------------------*)
 
-  let todo = D (fun _ -> flush_all () ; failwith "Students! This is your job!")
+  let todo = D (fun _ -> failwith "Students! This is your job!")
 
   let negC =
-    todo
+    linearD (fun x -> C.Num.neg x) C.negC
 
   let addC =
-    todo
+    linearD (fun (x,y) -> C.Num.add x y) C.addC
 
   let mulC =
-    todo
+    D (fun (x,y) ->
+      let scale_x = C.scale x in
+      let scale_y = C.scale y in
+      let nabla x y = C.compose (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) C.ok_t (C.jam C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y) in
+      (C.Num.mul x y, nabla scale_y scale_x)
+    )
 
   let sinC =
     todo
