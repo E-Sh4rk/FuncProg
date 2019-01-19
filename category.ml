@@ -965,11 +965,16 @@ end
   let addC =
     linearD (fun (x,y) -> C.Num.add x y) C.addC
 
+  let nablaC (x:(C.t, C.t) C.k) (y:(C.t, C.t) C.k) =
+    let module A = CoCartesianCatDerivedOperations(C) in A.join C.ok_t C.ok_t C.ok_t (x, y)
+
+  (*
   let nablaC x y =
-    C.compose (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) C.ok_t (C.jam C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y)
+    C.compose (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) C.ok_t (C.jam C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y) 
 
   let deltaC x y =
     C.compose C.ok_t (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y) (C.dup C.ok_t)
+  *)
 
   let mulC =
     D (fun (x,y) ->
@@ -1061,6 +1066,7 @@ end
 
   let id oka =
     failwith "Students! This is your job!"
+    (* Cont (C.id oka) *)
 
   let compose oka okb okc (Cont g) (Cont f) =
     failwith "Students! This is your job!"
