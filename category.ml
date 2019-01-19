@@ -957,8 +957,6 @@ end
   (*             Then, run `make -C tests/task-1`.   *)
   (*-------------------------------------------------*)
 
-  let todo = D (fun _ -> failwith "Students! This is your job!")
-
   let negC =
     linearD (fun x -> C.Num.neg x) C.negC
 
@@ -1065,32 +1063,36 @@ end
   (*-------------------------------------------------*)
 
   let id oka =
-    failwith "Students! This is your job!"
-    (* Cont (C.id oka) *)
+    (* cont oka oka (C.id oka) *)
+    Cont (fun x -> x)
 
   let compose oka okb okc (Cont g) (Cont f) =
-    failwith "Students! This is your job!"
+    Cont (fun x -> f (g x))
 
   let pair oka okb okc okd (Cont f) (Cont g) =
-    failwith "Students! This is your job!"
+    Cont (fun x ->
+      let (x1,x2) = AFD.unjoin R.okr okc okd x in
+      let (y1,y2) = (f x1, g x2) in
+      AFD.join R.okr oka okb (y1, y2)
+    )
 
   let exl (type a b) (oka : a C.ok) (okb : b C.ok) : (a * b, a) k =
-    failwith "Students! This is your job!"
+    cont (C.ok_pair oka okb) oka (C.exl oka okb)
 
   let exr (type a b) (oka : a C.ok) (okb : b C.ok) : (a * b, b) k =
-    failwith "Students! This is your job!"
+    cont (C.ok_pair oka okb) okb (C.exr oka okb)
 
   let dup (type a) (oka : a C.ok) : (a, a * a) k =
-    failwith "Students! This is your job!"
+    cont oka (C.ok_pair oka oka) (C.dup oka)
 
   let inl (type a b) (oka : a C.ok) (okb : b C.ok) : (a, a * b) k =
-    failwith "Students! This is your job!"
+    cont oka (C.ok_pair oka okb) (C.inl oka okb)
 
   let inr (type a b) (oka : a C.ok) (okb : b C.ok) : (b, a * b) k =
-    failwith "Students! This is your job!"
+    cont okb (C.ok_pair oka okb) (C.inr oka okb)
 
   let jam (type a) (oka : a C.ok) : (a * a, a) k =
-    failwith "Students! This is your job!"
+    cont (C.ok_pair oka oka) oka (C.jam oka)
 
   let ok_unit = C.ok_unit
 
