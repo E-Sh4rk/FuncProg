@@ -41,12 +41,29 @@ let string_of_type t =
   PPrintEngine.ToBuffer.pretty 0.8 80 b (group (ty t));
   Buffer.contents b
 
+module IdMap = Map.Make(struct type t = identifier let compare = compare end)
+
+let check_term (env:typ IdMap.t) (term:term' Position.located) (t:typ) : unit =
+   let pos = term.position in
+   let term = term.value in
+   failwith "Student! This is your job!"
 
 (** [check_program source] returns [source] if it is well-typed or
    reports an error if it is not. *)
 let check_program (source : program_with_locations) : program_with_locations =
-  failwith "Student! This is your job!"
-
+   (* Build the global environment *)
+   let add_binding acc (binding_loc, _) =
+      let (id,t) = binding_loc.Position.value in
+      IdMap.add id t acc
+   in
+   let env = List.fold_left add_binding IdMap.empty source in
+   (* Check all definitions *)
+   let check_def (binding_loc, term_loc) =
+      let (_,t) = binding_loc.Position.value in
+      check_term env term_loc t
+   in
+   List.iter check_def source ; source
+   
 (** [eta_expanse source] makes sure that only functions are defined at
     toplevel and turns them into eta-long forms if needed. *)
 let eta_expanse : program_with_locations -> program_with_locations =
