@@ -144,4 +144,6 @@ let eta_expanse : program_with_locations -> program_with_locations =
 let program : program_with_locations -> program_with_locations = fun source ->
   let xsource = check_program source in
   if !Options.typecheck_only then exit 0;
-  eta_expanse xsource
+  let xsource = eta_expanse xsource in
+  if !Options.eta_expanse_only then exit 0;
+  xsource

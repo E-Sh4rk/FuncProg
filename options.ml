@@ -1,5 +1,7 @@
 let typecheck_only = ref false
 
+let eta_expanse_only = ref false
+
 let without_oks = ref false
 
 let simplify = ref true
@@ -9,6 +11,9 @@ let compact = ref false
 let options = Arg.([
   "--typecheck", Unit (fun () -> typecheck_only := true),
   " Typecheck and stop.";
+
+  "--eta-expanse", Unit (fun () -> eta_expanse_only := true),
+  " Typecheck, eta expanse and stop (for testing).";
 
   "--no-ok", Unit (fun () -> without_oks := true),
   " Do not produce 'ok' witnesses.";
