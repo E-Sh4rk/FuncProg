@@ -108,12 +108,11 @@ let check_program (source : program_with_locations) : program_with_locations =
    let env = List.fold_left add_binding IdMap.empty source in *)
    (* Check all definitions *)
    let check_def env (binding_loc, term_loc) =
-      let (_,typ) = binding_loc.Position.value in
+      let (id,typ) = binding_loc.Position.value in
       if type_of_term env term_loc <> typ
       then type_error binding_loc.Position.position "Declared type and actual type mismatch!"
       else begin
          (* We add this newly defined identifier to the global environment *)
-         let (id,typ) = binding_loc.Position.value in
          if IdMap.mem id env
          then type_error binding_loc.Position.position "Global identifier already defined!"
          else IdMap.add id typ env
