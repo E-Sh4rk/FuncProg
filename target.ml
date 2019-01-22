@@ -20,3 +20,11 @@ and ok =
   | OkPair of ok * ok
   | OkArrow of ok * ok
 
+let compose oka okb okc a1 a2 =
+  App (App ((Compose (oka, okb, okc)), a1), a2)
+
+let fork oka okb okc a1 a2 =
+  App (App ((Fork (oka, okb, okc)), a1), a2)
+
+let apply oka okb a =
+  App (Apply (oka, okb), a)

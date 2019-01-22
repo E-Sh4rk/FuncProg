@@ -6,6 +6,9 @@ type program_with_locations =
 and program =
   (binding * term) list
 
+(*and program_with_type =
+  (binding * typed_term) list*)
+
 and 't t =
   | Var of identifier
   | App of 't * 't
@@ -19,6 +22,14 @@ and 't t =
 and term' = term' Position.located t
 
 and term = term t
+
+(*and 'a type_annot =
+    {
+      value    : 'a;
+      typ      : typ;
+    }
+
+and typed_term = typed_term type_annot t*)
 
 and binding = identifier * typ
 
