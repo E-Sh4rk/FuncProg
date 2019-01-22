@@ -98,20 +98,28 @@ let rec type_of_term (env:typ IdMap.t) (term_loc:term' Position.located) : typ =
    reports an error if it is not. *)
 let check_program (source : program_with_locations) : program_with_locations =
    (* Build the global environment *)
-   let add_binding acc (binding_loc, _) =
+   (* We should not do that beforehand because it would allow recusrive functions. *)
+   (* let add_binding acc (binding_loc, _) =
       let (id,typ) = binding_loc.Position.value in
       if IdMap.mem id acc
       then type_error binding_loc.Position.position "Global identifier already defined!"
       else IdMap.add id typ acc
    in
-   let env = List.fold_left add_binding IdMap.empty source in
+   let env = List.fold_left add_binding IdMap.empty source in *)
    (* Check all definitions *)
-   let check_def (binding_loc, term_loc) =
+   let check_def env (binding_loc, term_loc) =
       let (_,typ) = binding_loc.Position.value in
       if type_of_term env term_loc <> typ
       then type_error binding_loc.Position.position "Declared type and actual type mismatch!"
+      else begin
+         (* We add this newly defined identifier to the global environment *)
+         let (id,typ) = binding_loc.Position.value in
+         if IdMap.mem id env
+         then type_error binding_loc.Position.position "Global identifier already defined!"
+         else IdMap.add id typ env
+      end
    in
-   List.iter check_def source ; source
+   ignore (List.fold_left check_def IdMap.empty source) ; source
 
 module IdSet = Set.Make(struct type t = identifier let compare = compare end)
 
@@ -128,7 +136,7 @@ let eta_expanse : program_with_locations -> program_with_locations =
             begin match term with
             | Lam _ -> t_loc
             | _ ->
-               let id = Id "__x__" in
+               let id = Id "eta-exp" in (* this identifier cannot exist as global variable because it contains '-' *)
                let var_loc = { Position.position = pos; Position.value = Var id } in
                let app_loc = { Position.position = pos; Position.value = App (t_loc, var_loc) } in
                { Position.position = pos; Position.value = Lam ((id,typ), app_loc) }
