@@ -17,11 +17,11 @@ let ok_of_ctx ctx =
 let rec compile_app (ctx:ctx) (u:term) (v:term) : (t * ok) =
    let (ta, oka) = compile_term ctx u in
    let (tb, okb) = compile_term ctx v in
-   let okc = ok_of_ctx ctx in
+   let ok_ctx = ok_of_ctx ctx in
    let oka' = match oka with OkArrow(_,oka') -> oka' | _ -> assert false in
-   let frk = fork okc oka okb ta tb in
-   let apl = Apply (okc, oka') in
-   (compose okc (OkPair (oka, okb)) oka' apl frk, oka')
+   let frk = fork ok_ctx oka okb ta tb in
+   let apl = Apply (okb, oka') in
+   (compose ok_ctx (OkPair (oka, okb)) oka' apl frk, oka')
 
 and compile_term (c:ctx) (t:term) : (t * ok) =
    failwith "Student! This is your job!"
