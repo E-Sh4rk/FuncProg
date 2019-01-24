@@ -46,83 +46,96 @@ let rec extract_var_from_ctx (ctx:ctx) (id:identifier) : ((t * ok) option) =
          | _ -> assert false
       end
 
-let rec compile_app (ctx:ctx) (u:term) (v:term) : (t * ok) =
-   let ok_ctx = ok_of_ctx ctx in
-   let (ta, oka) = compile_term ctx u in
-   let (tb, okb) = compile_term ctx v in
-   let oka' = match oka with OkArrow(_,oka') -> oka' | _ -> assert false in
-   let frk = fork ok_ctx oka okb ta tb in
-   let apl = Apply (okb, oka') in
-   (compose ok_ctx (OkPair (oka, okb)) oka' apl frk, oka')
+let compile_global_term (global_ctx:(t * ok) IdMap.t) (t : term) : (t * ok) =
 
-and compile_lam (ctx:ctx) (b:binding) (u:term) =
-   let ok_ctx = ok_of_ctx ctx in
-   let new_ctx = ctx_prod ctx (ctx_of_binding b) in
-   let ok_var = ok_of_type (snd b) in
-   let (t, ok) = compile_term new_ctx u (* t : Γ × A -> B *) in
-   (curry ok_ctx ok_var ok t, OkArrow (ok_var, ok))
+   let rec compile_app (ctx:ctx) (u:term) (v:term) : (t * ok) =
+      let ok_ctx = ok_of_ctx ctx in
+      let (ta, oka) = compile_term ctx u in
+      let (tb, okb) = compile_term ctx v in
+      let oka' = match oka with OkArrow(_,oka') -> oka' | _ -> assert false in
+      let frk = fork ok_ctx oka okb ta tb in
+      let apl = Apply (okb, oka') in
+      (compose ok_ctx (OkPair (oka, okb)) oka' apl frk, oka')
 
-and compile_var (ctx:ctx) (id:identifier) =
-   match extract_var_from_ctx ctx id with
-   | Some res -> res
-   | None ->
-      (* Global function *)
-      failwith "Student! This is your job!"
+   and compile_lam (ctx:ctx) (b:binding) (u:term) : (t * ok) =
+      let ok_ctx = ok_of_ctx ctx in
+      let new_ctx = ctx_prod ctx (ctx_of_binding b) in
+      let ok_var = ok_of_type (snd b) in
+      let (t, ok) = compile_term new_ctx u (* t : Γ × A -> B *) in
+      (curry ok_ctx ok_var ok t, OkArrow (ok_var, ok))
 
-and compile_const (ctx:ctx) (c:literal) : (t * ok) =
-   let ok_ctx = ok_of_ctx ctx in
-   let ua = unit_arrow OkFloat c in
-   let it = It ok_ctx in
-   (compose ok_ctx OkUnit OkFloat ua it, OkFloat)
+   and compile_var (ctx:ctx) (id:identifier) : (t * ok) =
+      match extract_var_from_ctx ctx id with
+      | Some res -> res (* Local var *)
+      | None ->
+         (* Global function *)
+         let ok_ctx = ok_of_ctx ctx in
+         let (f,ok) = IdMap.find id global_ctx in
+         let it = It ok_ctx in
+         (compose ok_ctx OkUnit ok f it, ok)
 
-and compile_fst (ctx:ctx) (u:term) : (t * ok) =
-   let ok_ctx = ok_of_ctx ctx in
-   let (t, ok) = compile_term ctx u in
-   let (oka, okb) = match ok with OkPair (oka, okb) -> (oka, okb) | _ -> assert false in
-   let exl = Exl (oka, okb) in
-   (compose ok_ctx ok oka exl t, oka)
+   and compile_const (ctx:ctx) (c:literal) : (t * ok) =
+      let ok_ctx = ok_of_ctx ctx in
+      let ua = unit_arrow OkFloat c in
+      let it = It ok_ctx in
+      (compose ok_ctx OkUnit OkFloat ua it, OkFloat)
 
-and compile_snd (ctx:ctx) (u:term) : (t * ok) =
-   let ok_ctx = ok_of_ctx ctx in
-   let (t, ok) = compile_term ctx u in
-   let (oka, okb) = match ok with OkPair (oka, okb) -> (oka, okb) | _ -> assert false in
-   let exr = Exr (oka, okb) in
-   (compose ok_ctx ok okb exr t, okb)
+   and compile_fst (ctx:ctx) (u:term) : (t * ok) =
+      let ok_ctx = ok_of_ctx ctx in
+      let (t, ok) = compile_term ctx u in
+      let (oka, okb) = match ok with OkPair (oka, okb) -> (oka, okb) | _ -> assert false in
+      let exl = Exl (oka, okb) in
+      (compose ok_ctx ok oka exl t, oka)
 
-and compile_pair (ctx:ctx) (u:term) (v:term) : (t * ok) =
-   let ok_ctx = ok_of_ctx ctx in
-   let (ta, oka) = compile_term ctx u in
-   let (tb, okb) = compile_term ctx v in
-   (fork ok_ctx oka okb ta tb, OkPair(oka, okb))
+   and compile_snd (ctx:ctx) (u:term) : (t * ok) =
+      let ok_ctx = ok_of_ctx ctx in
+      let (t, ok) = compile_term ctx u in
+      let (oka, okb) = match ok with OkPair (oka, okb) -> (oka, okb) | _ -> assert false in
+      let exr = Exr (oka, okb) in
+      (compose ok_ctx ok okb exr t, okb)
 
-and compile_prim (ctx:ctx) (p:primitive) : (t * ok) =
-   let ok_ctx = ok_of_ctx ctx in
-   let ok_prim = ok_of_primitive p in
-   let (prim, prim_oka, prim_okb) =
-      match ok_prim with
-      | OkArrow (oka, OkArrow(okb,okc)) -> (* Arity 2 *)
-         (curry oka okb okc (Primitive p), oka, OkArrow(okb,okc))
-      | OkArrow (oka, okb) -> (* Arity 1 *) (Primitive p, oka, okb)
-      | _ -> assert false
-   in
-   let exr = Exr (OkUnit, prim_oka) in
-   let prim_exr = compose (OkPair (OkUnit, prim_oka)) prim_oka prim_okb prim exr in
-   let curried_prim_exr = curry OkUnit prim_oka prim_okb prim_exr in
-   let it = It ok_ctx in
-   (compose ok_ctx OkUnit ok_prim curried_prim_exr it, ok_prim)
+   and compile_pair (ctx:ctx) (u:term) (v:term) : (t * ok) =
+      let ok_ctx = ok_of_ctx ctx in
+      let (ta, oka) = compile_term ctx u in
+      let (tb, okb) = compile_term ctx v in
+      (fork ok_ctx oka okb ta tb, OkPair(oka, okb))
 
-and compile_term (ctx:ctx) (t:term) : (t * ok) =
-   match t with 
-    | Var id      -> compile_var   ctx id
-    | App (u,v)   -> compile_app   ctx u v
-    | Lam (b,u)   -> compile_lam   ctx b u
-    | Pair (u,v)  -> compile_pair  ctx u v
-    | Fst u       -> compile_fst   ctx u
-    | Snd u       -> compile_snd   ctx u
-    | Literal c   -> compile_const ctx c
-    | Primitive p -> compile_prim  ctx p
+   and compile_prim (ctx:ctx) (p:primitive) : (t * ok) =
+      let ok_ctx = ok_of_ctx ctx in
+      let ok_prim = ok_of_primitive p in
+      let (prim, prim_oka, prim_okb) =
+         match ok_prim with
+         | OkArrow (oka, OkArrow(okb,okc)) -> (* Arity 2 *)
+            (curry oka okb okc (Primitive p), oka, OkArrow(okb,okc))
+         | OkArrow (oka, okb) -> (* Arity 1 *) (Primitive p, oka, okb)
+         | _ -> assert false
+      in
+      let exr = Exr (OkUnit, prim_oka) in
+      let prim_exr = compose (OkPair (OkUnit, prim_oka)) prim_oka prim_okb prim exr in
+      let curried_prim_exr = curry OkUnit prim_oka prim_okb prim_exr in
+      let it = It ok_ctx in
+      (compose ok_ctx OkUnit ok_prim curried_prim_exr it, ok_prim)
+
+   and compile_term (ctx:ctx) (t:term) : (t * ok) =
+      match t with 
+      | Var id      -> compile_var   ctx id
+      | App (u,v)   -> compile_app   ctx u v
+      | Lam (b,u)   -> compile_lam   ctx b u
+      | Pair (u,v)  -> compile_pair  ctx u v
+      | Fst u       -> compile_fst   ctx u
+      | Snd u       -> compile_snd   ctx u
+      | Literal c   -> compile_const ctx c
+      | Primitive p -> compile_prim  ctx p
+
+   in compile_term CtxEmpty t
 
 (** [source_to_categories] translates a [source] in a [target] language
     made of categorical combinators. *)
 let source_to_categories : Source.program -> Target.program = fun source ->
-   failwith "Student! This is your job!"
+   let compile_def (global_ctx, res) ((id,typ), t) =
+      let (t, ok) = compile_global_term global_ctx t in
+      let global_ctx = IdMap.add id (t,ok) global_ctx in
+      (global_ctx, ((id,typ),t)::res)
+   in
+   let (_, res) = List.fold_left compile_def (IdMap.empty, []) source in
+   List.rev res
