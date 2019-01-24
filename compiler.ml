@@ -2,10 +2,9 @@ open Source
 open Target
 open Typechecker
 
-module IdMap = Typechecker.IdMap
 type ctx =
    | CtxEmpty
-   | CtxSingleton of string * typ * ok (* Var name, var type, var ok *)
+   | CtxSingleton of identifier * typ * ok (* Var id, var type, var ok *)
    | CtxProd of ctx * ctx * ok         (* Left child, right child, ok for this node *)
 
 let ok_of_ctx ctx =
@@ -24,6 +23,11 @@ let rec ok_of_type typ =
    | TyConstant TyFloat -> OkFloat
    | TyArrow (typ1,typ2) -> OkArrow (ok_of_type typ1, ok_of_type typ2)
    | TyPair (typ1,typ2) -> OkPair (ok_of_type typ1, ok_of_type typ2)
+
+let ctx_of_binding (id, typ) = CtxSingleton (id, typ, ok_of_type typ)
+
+let ctx_prod (ctx1:ctx) (ctx2:ctx) =
+   CtxProd (ctx1, ctx2, OkPair(ok_of_ctx ctx1, ok_of_ctx ctx2))
 
 let rec compile_app (ctx:ctx) (u:term) (v:term) : (t * ok) =
    let ok_ctx = ok_of_ctx ctx in
