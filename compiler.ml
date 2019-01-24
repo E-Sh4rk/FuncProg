@@ -111,8 +111,16 @@ and compile_prim (ctx:ctx) (p:primitive) : (t * ok) =
    let it = It ok_ctx in
    (compose ok_ctx OkUnit ok_prim curried_prim_exr it, ok_prim)
 
-and compile_term (c:ctx) (t:term) : (t * ok) =
-   failwith "Student! This is your job!"
+and compile_term (ctx:ctx) (t:term) : (t * ok) =
+   match t with 
+    | Var id      -> compile_var   ctx id
+    | App (u,v)   -> compile_app   ctx u v
+    | Lam (b,u)   -> compile_lam   ctx b u
+    | Pair (u,v)  -> compile_pair  ctx u v
+    | Fst u       -> compile_fst   ctx u
+    | Snd u       -> compile_snd   ctx u
+    | Literal c   -> compile_const ctx c
+    | Primitive p -> compile_prim  ctx p
 
 (** [source_to_categories] translates a [source] in a [target] language
     made of categorical combinators. *)
