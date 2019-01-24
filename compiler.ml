@@ -60,6 +60,22 @@ and compile_pair (ctx:ctx) (u:term) (v:term) : (t * ok) =
    let (tb, okb) = compile_term ctx v in
    (fork ok_ctx oka okb ta tb, OkPair(oka, okb))
 
+and compile_prim (ctx:ctx) (p:primitive) : (t * ok) =
+   let ok_ctx = ok_of_ctx ctx in
+   let ok_prim = ok_of_primitive p in
+   let (prim, prim_oka, prim_okb) =
+      match ok_prim with
+      | OkArrow (oka, OkArrow(okb,okc)) -> (* Arity 2 *)
+         (curry oka okb okc (Primitive p), oka, OkArrow(okb,okc))
+      | OkArrow (oka, okb) -> (* Arity 1 *) (Primitive p, oka, okb)
+      | _ -> assert false
+   in
+   let exr = Exr (OkUnit, prim_oka) in
+   let prim_exr = compose (OkPair (OkUnit, prim_oka)) prim_oka prim_okb prim exr in
+   let curried_prim_exr = curry OkUnit prim_oka prim_okb prim_exr in
+   let it = It ok_ctx in
+   (compose ok_ctx OkUnit ok_prim curried_prim_exr it, ok_prim)
+
 and compile_term (c:ctx) (t:term) : (t * ok) =
    failwith "Student! This is your job!"
 
