@@ -46,7 +46,7 @@ let rec extract_var_from_ctx (ctx:ctx) (id:identifier) : ((t * ok) option) =
          | _ -> assert false
       end
 
-let compile_global_term (global_ctx:(t * ok) IdMap.t) (t : term) : (t * ok) =
+let compile_global_term (t : term) : t =
 
    let rec compile_app (ctx:ctx) (u:term) (v:term) : (t * ok) =
       let ok_ctx = ok_of_ctx ctx in
@@ -66,14 +66,8 @@ let compile_global_term (global_ctx:(t * ok) IdMap.t) (t : term) : (t * ok) =
 
    and compile_var (ctx:ctx) (id:identifier) : (t * ok) =
       match extract_var_from_ctx ctx id with
-      | Some res -> res (* Local var *)
-      | None ->
-         (* Global function *)
-         let ok_ctx = ok_of_ctx ctx in
-         let (f,ok) = IdMap.find id global_ctx (* f : A *) in
-         let f = unit_arrow ok f (* f : unit -> A *) in
-         let it = It ok_ctx in
-         (compose ok_ctx OkUnit ok f it, ok) (* ctx -> A *)
+      | Some res -> res
+      | None -> assert false
 
    and compile_const (ctx:ctx) (c:literal) : (t * ok) =
       let ok_ctx = ok_of_ctx ctx in
@@ -130,18 +124,39 @@ let compile_global_term (global_ctx:(t * ok) IdMap.t) (t : term) : (t * ok) =
 
    in
    match t with
-   | Lam ((id,ty),t) ->
-      let (t, ok) = compile_term (ctx_of_binding (id,ty)) t in
-      (t, OkArrow(ok_of_type ty, ok))
+   | Lam (b,t) ->
+      let (t,_) = compile_term (ctx_of_binding b) t in
+      t
    | _ -> assert false
+
+
+let pack_program (s:Source.program) : (binding * term) =
+
+   let rec pack (s:Source.program) : (binding * term * typ) = 
+      match s with
+      | [] -> assert false
+      | [(b,t)] ->
+         begin match t with
+         | Lam ((_,ty),_) -> (b, t, ty)
+         | _ -> assert false
+         end
+      | (b,t) :: xs ->
+         let (b',t',typ') = pack xs in
+         (b', App (Lam (b, t'), t), typ')
+   in
+
+   let id = Id "eta-exp" in
+   let (b,t,typ) = pack s in
+   (b, Lam ((id, typ), Source.App (t, Var id)))
 
 (** [source_to_categories] translates a [source] in a [target] language
     made of categorical combinators. *)
 let source_to_categories : Source.program -> Target.program = fun source ->
-   let compile_def (global_ctx, res) ((id,typ), t) =
-      let (t, ok) = compile_global_term global_ctx t in
-      let global_ctx = IdMap.add id (t,ok) global_ctx in
-      (global_ctx, ((id,typ),t)::res)
+
+   let rec accumulate l = match l with
+    | []   -> [[]]
+    | h::l -> List.map (fun l -> h::l) (accumulate l)
    in
-   let (_, res) = List.fold_left compile_def (IdMap.empty, []) source in
-   List.rev res
+
+   let source = List.map pack_program (accumulate source) in
+   List.map (fun (x,y) -> (x, compile_global_term y)) source
