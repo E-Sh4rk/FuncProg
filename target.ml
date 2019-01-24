@@ -25,3 +25,6 @@ let compose oka okb okc a1 a2 =
 
 let fork oka okb okc a1 a2 =
   App (App ((Fork (oka, okb, okc)), a1), a2)
+
+let unit_arrow ok l =
+  App (UnitArrow ok, Literal l)
