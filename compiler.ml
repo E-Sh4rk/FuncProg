@@ -70,13 +70,14 @@ let compile_global_term (global_ctx:(t * ok) IdMap.t) (t : term) : (t * ok) =
       | None ->
          (* Global function *)
          let ok_ctx = ok_of_ctx ctx in
-         let (f,ok) = IdMap.find id global_ctx in
+         let (f,ok) = IdMap.find id global_ctx (* f : A *) in
+         let f = unit_arrow ok f (* f : unit -> A *) in
          let it = It ok_ctx in
-         (compose ok_ctx OkUnit ok f it, ok)
+         (compose ok_ctx OkUnit ok f it, ok) (* ctx -> A *)
 
    and compile_const (ctx:ctx) (c:literal) : (t * ok) =
       let ok_ctx = ok_of_ctx ctx in
-      let ua = unit_arrow OkFloat c in
+      let ua = unit_arrow OkFloat (Literal c) in
       let it = It ok_ctx in
       (compose ok_ctx OkUnit OkFloat ua it, OkFloat)
 
@@ -127,7 +128,12 @@ let compile_global_term (global_ctx:(t * ok) IdMap.t) (t : term) : (t * ok) =
       | Literal c   -> compile_const ctx c
       | Primitive p -> compile_prim  ctx p
 
-   in compile_term CtxEmpty t
+   in
+   match t with
+   | Lam ((id,ty),t) ->
+      let (t, ok) = compile_term (ctx_of_binding (id,ty)) t in
+      (t, OkArrow(ok_of_type ty, ok))
+   | _ -> assert false
 
 (** [source_to_categories] translates a [source] in a [target] language
     made of categorical combinators. *)

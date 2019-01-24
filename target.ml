@@ -29,5 +29,5 @@ let fork oka okb okc a1 a2 =
 let curry oka okb okc a =
   App ((Curry (oka, okb, okc)), a)
 
-let unit_arrow ok l =
-  App (UnitArrow ok, Literal l)
+let unit_arrow ok t =
+  App (UnitArrow ok, t)
