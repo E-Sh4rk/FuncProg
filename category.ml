@@ -508,9 +508,9 @@ module AdditiveFunctionsCat : sig
           with type ('a, 'b) k := ('a, 'b) k
           with type 'a ok := 'a ok
 
-  include CartesianClosedCat
+  (*include CartesianClosedCat
           with type ('a, 'b) k := ('a, 'b) k
-          with type 'a ok := 'a ok
+          with type 'a ok := 'a ok*)
 
 end
 = struct
@@ -568,7 +568,7 @@ end
   let ok_unit : unit ok =
     (module AdditiveUnit)
 
-  let apply oka okb =
+  (*let apply oka okb =
     AdditiveFun (fun (f, a) -> f a)
 
   let curry oka okb okc (AdditiveFun f) =
@@ -580,7 +580,7 @@ end
   let ok_arrow (type a b) (oka : a ok) (okb : b ok) : (a -> b) ok =
     let module A = (val oka) in 
     let module B = (val okb) in 
-    (module AdditiveLambda(A)(B))
+    (module AdditiveLambda(A)(B))*)
 
 end
 
