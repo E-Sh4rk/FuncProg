@@ -50,6 +50,37 @@ let rec target_to_simple_term (t:t) : cat_term =
     Compose (chain_left@chain_right)
   | _ -> assert false
 
+let rec simple_term_to_target (t:cat_term) : t =
+  match t with
+  (* Base cases *)
+  | Identity ok -> Identity ok
+  | Apply (ok1, ok2) -> Apply (ok1, ok2)
+  | Exl (ok1, ok2) -> Exl (ok1, ok2)
+  | Exr (ok1, ok2) -> Exr (ok1, ok2)
+  | It ok -> It ok
+  | Literal l -> Literal l
+  | Primitive p -> Primitive p
+  (* Inductive cases *)
+  | Curry (oka, okb, okc, a) ->
+    curry oka okb okc (simple_term_to_target a)
+  | UnCurry (oka, okb, okc, a) ->
+    uncurry oka okb okc (simple_term_to_target a)
+  | Fork (oka, okb, okc, a, b) ->
+    fork oka okb okc (simple_term_to_target a) (simple_term_to_target b)
+  | UnitArrow (ok, a) ->
+    unit_arrow ok (simple_term_to_target a)
+  (* Case of compose *)
+  | Compose lst ->
+    let lst = List.map (fun (okb,a,oka) -> (okb,simple_term_to_target a,oka)) lst in
+    let rec aux lst = match lst with
+      | [(_, t, _)] -> t
+      | ((okc, t1, okb')::(okb, t2, oka)::lst) when okb = okb' ->
+        let comp = compose oka okb okc t1 t2 in
+        aux ((okc,comp,oka)::lst)
+      | _ -> assert false
+    in
+    aux lst
+
 (** [rewrite defs] applies category laws to remove [apply] and [curry]
     from the compiled programs. *)
 let rewrite : Target.program -> Target.program = fun defs ->
