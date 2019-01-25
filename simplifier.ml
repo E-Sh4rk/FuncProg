@@ -98,15 +98,20 @@ let rec map_cat_term f (t:cat_term) : cat_term =
   | Literal lit -> f (Literal lit)
   | Primitive prim -> f (Primitive prim)
 
-let simplify_id (t:cat_term) : cat_term =
+let map_compose_cat_term f (t:cat_term) : cat_term =
   let simpl (t:cat_term) : cat_term =
     match t with
-    | Compose lst ->
-      let lst' = List.filter (function (_,Identity _,_) -> false | _ -> true) lst in
-      if List.length lst' = 0 then Compose [List.hd lst] else Compose lst'
+    | Compose lst -> Compose (f lst)
     | t -> t
   in
   map_cat_term simpl t
+
+let simplify_id (t:cat_term) : cat_term =
+  let simpl lst =
+    let lst' = List.filter (function (_,Identity _,_) -> false | _ -> true) lst in
+    if List.length lst' = 0 then [List.hd lst] (* Empty compositions are not allowed *) else lst'
+  in
+  map_compose_cat_term simpl t
 
 (** [rewrite defs] applies category laws to remove [apply] and [curry]
     from the compiled programs. *)
