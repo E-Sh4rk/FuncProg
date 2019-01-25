@@ -117,6 +117,10 @@ let simplify_apply_curry (t:cat_term) : cat_term =
   let rec simpl lst =
     match lst with
     | [] -> []
+    | (_, Apply _, _)::(_, Fork (ok_t1_t2_in, _, ok_t2_out, Curry (ok_f_in1,ok_f_in2,ok_f_out,f), t2), ok_fork_in)::lst ->
+      let t1 = Identity ok_t1_t2_in in
+      let ok_f_in = OkPair(ok_f_in1,ok_f_in2) in
+      simpl ((ok_f_out,f,ok_f_in)::(ok_f_in,Fork(ok_t1_t2_in,ok_t1_t2_in,ok_t2_out,t1,t2),ok_fork_in)::lst)
     | (_, Apply _, _)::(_, Fork (ok_t1_t2_in, _, ok_t2_out, Compose ((_,Curry (ok_f_in1,ok_f_in2,ok_f_out,f),ok_t1_out)::lst'), t2), ok_fork_in)::lst ->
       let t1 = if List.length lst' = 0
         then Identity ok_t1_out
