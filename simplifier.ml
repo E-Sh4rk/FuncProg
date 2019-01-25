@@ -113,6 +113,20 @@ let simplify_id (t:cat_term) : cat_term =
   in
   map_compose_cat_term simpl t
 
+let simplify_apply_curry (t:cat_term) : cat_term =
+  let rec simpl lst =
+    match lst with
+    | [] -> []
+    | (_, Apply _, _)::(_, Fork (ok_t1_t2_in, _, ok_t2_out, Compose ((_,Curry (ok_f_in1,ok_f_in2,ok_f_out,f),ok_t1_out)::lst'), t2), ok_fork_in)::lst ->
+      let t1 = if List.length lst' = 0
+        then Identity ok_t1_out
+        else Compose lst' in
+      let ok_f_in = OkPair(ok_f_in1,ok_f_in2) in
+      simpl ((ok_f_out,f,ok_f_in)::(ok_f_in,Fork(ok_t1_t2_in,ok_t1_out,ok_t2_out,t1,t2),ok_fork_in)::lst)
+    | a::lst -> a::(simpl lst)
+  in
+  map_compose_cat_term simpl t
+
 let simplify_proj (t:cat_term) : cat_term =
   let rec simpl lst =
     match lst with
@@ -130,6 +144,7 @@ let rewrite : Target.program -> Target.program = fun defs ->
     let simplify (b,t) =
       let ct = target_to_cat_term t in
       let ct = simplify_id ct in
+      let ct = simplify_apply_curry ct in
       let ct = simplify_proj ct in
       (b, cat_term_to_target ct)
     in
