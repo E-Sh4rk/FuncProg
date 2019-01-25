@@ -37,17 +37,7 @@ let rec target_to_cat_term (t:t) : cat_term =
   | App (App ((Compose (oka, okb, okc)), a1), a2) ->
     let t1 = target_to_cat_term a1 in
     let t2 = target_to_cat_term a2 in
-    let chain_left =
-    begin match t1 with
-      | Compose chain -> chain
-      | t1 -> [okc,t1,okb]
-    end in
-    let chain_right =
-    begin match t2 with
-      | Compose chain -> chain
-      | t2 -> [okb,t2,oka]
-    end in
-    Compose (chain_left@chain_right)
+    Compose [(okc,t1,okb) ; (okb,t2,oka)]
   | _ -> assert false
 
 let rec cat_term_to_target (t:cat_term) : t =
@@ -106,12 +96,20 @@ let map_compose_cat_term f (t:cat_term) : cat_term =
   in
   map_cat_term simpl t
 
+(* Flatten nested compositions so it is easier to reason modulo associativity. *)
+let normalize_cat_term (t:cat_term) : cat_term =
+  let simpl lst =
+    let lst = List.map (function (oka,Compose lst,okb) -> lst | a -> [a]) lst in
+    List.flatten lst
+  in
+  map_compose_cat_term simpl t
+
 let simplify_id (t:cat_term) : cat_term =
   let simpl lst =
     let lst' = List.filter (function (_,Identity _,_) -> false | _ -> true) lst in
     if List.length lst' = 0 then [List.hd lst] (* Empty compositions are not allowed *) else lst'
   in
-  map_compose_cat_term simpl t
+  map_compose_cat_term simpl (normalize_cat_term t)
 
 let simplify_apply_curry (t:cat_term) : cat_term =
   let rec simpl lst =
@@ -129,7 +127,7 @@ let simplify_apply_curry (t:cat_term) : cat_term =
       simpl ((ok_f_out,f,ok_f_in)::(ok_f_in,Fork(ok_t1_t2_in,ok_t1_out,ok_t2_out,t1,t2),ok_fork_in)::lst)
     | a::lst -> a::(simpl lst)
   in
-  map_compose_cat_term simpl t
+  map_compose_cat_term simpl (normalize_cat_term t)
 
 let simplify_proj (t:cat_term) : cat_term =
   let rec simpl lst =
@@ -139,7 +137,18 @@ let simplify_proj (t:cat_term) : cat_term =
     | (_, Exr _, _)::(_, Fork (oka, _, okb, _, g), _)::lst -> simpl ((okb,g,oka)::lst)
     | a::lst -> a::(simpl lst)
   in
-  map_compose_cat_term simpl t
+  map_compose_cat_term simpl (normalize_cat_term t)
+
+(*let test_valid_cat_term (t:cat_term) : cat_term =
+  let simpl lst =
+    match lst with
+    | [] -> assert false
+    | lst ->
+      if List.exists (function (_,Compose _,_) -> true | _ -> false) lst
+      then assert false
+      else lst
+  in
+  map_compose_cat_term simpl t*)
 
 (** [rewrite defs] applies category laws to remove [apply] and [curry]
     from the compiled programs. *)
@@ -150,6 +159,23 @@ let rewrite : Target.program -> Target.program = fun defs ->
       let ct = simplify_id ct in
       let ct = simplify_apply_curry ct in
       let ct = simplify_proj ct in
+
+      let ct = simplify_id ct in
+      let ct = simplify_apply_curry ct in
+      let ct = simplify_proj ct in
+
+      let ct = simplify_id ct in
+      let ct = simplify_apply_curry ct in
+      let ct = simplify_proj ct in
+
+      let ct = simplify_id ct in
+      let ct = simplify_apply_curry ct in
+      let ct = simplify_proj ct in
+
+      let ct = simplify_id ct in
+      let ct = simplify_apply_curry ct in
+      let ct = simplify_proj ct in
+
       (b, cat_term_to_target ct)
     in
     List.map simplify defs
