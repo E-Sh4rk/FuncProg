@@ -41,9 +41,9 @@ let rec extract_var_from_ctx (ctx:ctx) (id:identifier) : ((t * ok) option) =
       in begin
          match ext_l, ext_r with
          | None, None -> None
+         | _, Some (tr,ok_var) -> (* New variables are inserted at right so we search in priority at right *)
+            Some (compose ok okr ok_var tr (Exr (okl, okr)), ok_var)
          | Some (tl,ok_var), None -> Some (compose ok okl ok_var tl (Exl (okl, okr)), ok_var)
-         | None, Some (tr,ok_var) -> Some (compose ok okr ok_var tr (Exr (okl, okr)), ok_var)
-         | _ -> assert false
       end
 
 let compile_global_term (t : term) : t =
