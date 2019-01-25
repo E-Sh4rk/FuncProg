@@ -32,5 +32,5 @@ let curry oka okb okc a =
 let uncurry oka okb okc a =
   App ((UnCurry (oka, okb, okc)), a)
 
-let unit_arrow ok t =
-  App (UnitArrow ok, t)
+let unit_arrow ok a =
+  App (UnitArrow ok, a)
