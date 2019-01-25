@@ -98,12 +98,24 @@ let rec map_cat_term f (t:cat_term) : cat_term =
   | Literal lit -> f (Literal lit)
   | Primitive prim -> f (Primitive prim)
 
+let simplify_id (t:cat_term) : cat_term =
+  let simpl (t:cat_term) : cat_term =
+    match t with
+    | Compose lst ->
+      let lst' = List.filter (function (_,Identity _,_) -> false | _ -> true) lst in
+      if List.length lst' = 0 then Compose [List.hd lst] else Compose lst'
+    | t -> t
+  in
+  map_cat_term simpl t
+
 (** [rewrite defs] applies category laws to remove [apply] and [curry]
     from the compiled programs. *)
 let rewrite : Target.program -> Target.program = fun defs ->
   if !Options.simplify then
     let simplify (b,t) =
-      (b, cat_term_to_target (target_to_cat_term t))
+      let ct = target_to_cat_term t in
+      let ct = simplify_id ct in
+      (b, cat_term_to_target ct)
     in
     List.map simplify defs
   else
