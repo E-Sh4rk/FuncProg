@@ -113,6 +113,16 @@ let simplify_id (t:cat_term) : cat_term =
   in
   map_compose_cat_term simpl t
 
+let simplify_proj (t:cat_term) : cat_term =
+  let rec simpl lst =
+    match lst with
+    | [] -> []
+    | (_, Exl _, _)::(_, Fork (oka, okb, _, f, _), _)::lst -> simpl ((okb,f,oka)::lst)
+    | (_, Exr _, _)::(_, Fork (oka, _, okb, _, g), _)::lst -> simpl ((okb,g,oka)::lst)
+    | a::lst -> a::(simpl lst)
+  in
+  map_compose_cat_term simpl t
+
 (** [rewrite defs] applies category laws to remove [apply] and [curry]
     from the compiled programs. *)
 let rewrite : Target.program -> Target.program = fun defs ->
@@ -120,6 +130,7 @@ let rewrite : Target.program -> Target.program = fun defs ->
     let simplify (b,t) =
       let ct = target_to_cat_term t in
       let ct = simplify_id ct in
+      let ct = simplify_proj ct in
       (b, cat_term_to_target ct)
     in
     List.map simplify defs
