@@ -85,6 +85,9 @@ let rec simple_term_to_target (t:cat_term) : t =
     from the compiled programs. *)
 let rewrite : Target.program -> Target.program = fun defs ->
   if !Options.simplify then
-    failwith "Student! This is your job!"
+    let simplify (b,t) =
+      (b, simple_term_to_target (target_to_simple_term t))
+    in
+    List.map simplify defs
   else
     defs
