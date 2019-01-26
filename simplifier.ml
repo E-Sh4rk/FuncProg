@@ -152,13 +152,12 @@ let simplify_apply_curry_fork (t:cat_term) : cat_term = (* TODO: regroup all sim
       let t1 = Identity ok_t1_t2_in in
       let ok_f_in = OkPair(ok_f_in1,ok_f_in2) in
       simpl ((ok_f_out,f,ok_f_in)::(ok_f_in,Fork(ok_t1_t2_in,ok_t1_t2_in,ok_t2_out,t1,t2),ok_fork_in)::lst)
-    | (_, Apply _, _)::(_, Fork (ok_t1_t2_in, _, ok_t2_out, Compose (_,_,(_,Curry (ok_f_in1,ok_f_in2,ok_f_out,f),ok_t1_out)::lst'), t2), ok_fork_in)::lst ->
-      let t1 = make_compose lst' in
+    | (_, Apply _, _)::(_, Fork (ok_t1_t2_in, _, ok_t2_out, Compose (ok_t1_in,_,(_,Curry (ok_f_in1,ok_f_in2,ok_f_out,f),ok_t1_out)::lst'), t2), ok_fork_in)::lst ->
+      let t1 = Compose (ok_t1_in,ok_t1_out,lst') in
       let ok_f_in = OkPair(ok_f_in1,ok_f_in2) in
       simpl ((ok_f_out,f,ok_f_in)::(ok_f_in,Fork(ok_t1_t2_in,ok_t1_out,ok_t2_out,t1,t2),ok_fork_in)::lst)
     (* (u Δ v) . w  -> (u . w) Δ (v . w) *)
     | (ok_out,Fork(_,out_u,out_v,u,v),_)::(out_w,w,in_w)::lst ->
-      (* TODO: Add function to pack in a compose *)
       simpl ((ok_out, Fork(in_w,out_u,out_v,make_compose [(out_u,u,out_w);(out_w,w,in_w)],make_compose [(out_v,v,out_w);(out_w,w,in_w)]),in_w)::lst)
     | a::lst -> a::(simpl lst)
   in
