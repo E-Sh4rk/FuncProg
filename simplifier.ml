@@ -8,7 +8,7 @@ type cat_term =
   | Fork of ok * ok * ok * cat_term * cat_term
   | Exl of ok * ok
   | Exr of ok * ok
-  | UnitArrow of ok * cat_term
+  | UnitArrow of ok * cat_term (* TODO: restricts to literal *)
   | It of ok
   | Compose of ok * ok * ((ok * cat_term * ok) list) (* global_ok_domain, global_ok_codomain,[ok_codomain, morphism, ok_domain] *)
   | Literal of Source.literal
@@ -143,7 +143,7 @@ let simplify_id (t:cat_term) : cat_term =
   in
   map_compose_cat_term simpl (normalize_cat_term t)
 
-let simplify_apply_curry (t:cat_term) : cat_term =
+let simplify_apply_curry_fork (t:cat_term) : cat_term = (* TODO: regroup all simplifications to the same function *)
   let rec simpl lst =
     match lst with
     | [] -> []
@@ -155,6 +155,10 @@ let simplify_apply_curry (t:cat_term) : cat_term =
       let t1 = Compose (ok_t1_in,ok_t1_out,lst') in
       let ok_f_in = OkPair(ok_f_in1,ok_f_in2) in
       simpl ((ok_f_out,f,ok_f_in)::(ok_f_in,Fork(ok_t1_t2_in,ok_t1_out,ok_t2_out,t1,t2),ok_fork_in)::lst)
+    (* (u Δ v) . w  -> (u . w) Δ (v . w) *)
+    | (ok_out,Fork(_,out_u,out_v,u,v),_)::(out_w,w,in_w)::lst ->
+      (* TODO: Add function to pack in a compose *)
+      simpl ((ok_out, Fork(in_w,out_u,out_v,Compose(in_w,out_u,[(out_u,u,out_w);(out_w,w,in_w)]),Compose(in_w,out_v,[(out_v,v,out_w);(out_w,w,in_w)])),in_w)::lst)
     | a::lst -> a::(simpl lst)
   in
   map_compose_cat_term simpl (normalize_cat_term t)
@@ -180,28 +184,19 @@ let rewrite : Target.program -> Target.program = fun defs ->
   if !Options.simplify then
     let simplify (b,t) =
       let ct = target_to_cat_term t in
-      let ct = simplify_id ct in
-      let ct = simplify_apply_curry ct in
-      let ct = simplify_proj ct in
 
-      let ct = simplify_id ct in
-      let ct = simplify_apply_curry ct in
-      let ct = simplify_proj ct in
+      let res = ref ct in
+      let old_res = ref None in
+      while !old_res <> (Some !res)
+      do
+        old_res := Some (!res) ;
+        res := simplify_id (!res) ;
+        res := simplify_apply_curry_fork (!res) ;
+        res := simplify_proj (!res)
+      done ;
 
-      let ct = simplify_id ct in
-      let ct = simplify_apply_curry ct in
-      let ct = simplify_proj ct in
-
-      let ct = simplify_id ct in
-      let ct = simplify_apply_curry ct in
-      let ct = simplify_proj ct in
-
-      let ct = simplify_id ct in
-      let ct = simplify_apply_curry ct in
-      let ct = simplify_proj ct in
-
+      let ct = !res in
       (* Printf.printf "%s\n" (string_of_cat_term ct) ; flush_all () ; *)
-
       (b, cat_term_to_target ct)
     in
     List.map simplify defs
