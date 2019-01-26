@@ -14,6 +14,28 @@ type cat_term =
   | Literal of Source.literal
   | Primitive of Source.primitive
 
+let rec string_of_compose (_,_,lst) =
+  match lst with
+  | [] -> ""
+  | (_,hd,_)::lst ->
+    let lst_str = List.fold_left (fun acc (_,t,_) -> Printf.sprintf "%s o %s" acc (string_of_cat_term t)) "" lst
+    in Printf.sprintf "%s%s" (string_of_cat_term hd) lst_str
+
+and string_of_cat_term (t:cat_term) : string =
+  match t with
+  | Identity _ -> "Id"
+  | Curry (_,_,_,t) -> Printf.sprintf "Curry(%s)" (string_of_cat_term t)
+  | UnCurry (_,_,_,t) -> Printf.sprintf "UnCurry(%s)" (string_of_cat_term t)
+  | Apply _ -> "Apply"
+  | Fork (_,_,_,t1,t2) -> Printf.sprintf (*"(%s Δ %s)"*) "Fork(%s,%s)" (string_of_cat_term t1) (string_of_cat_term t2)
+  | Exl _ -> "Exl"
+  | Exr _ -> "Exr"
+  | UnitArrow (_,t) -> Printf.sprintf "UnitArrow(%s)" (string_of_cat_term t)
+  | It _ -> "It"
+  | Compose (a,b,c) -> string_of_compose (a,b,c)
+  | Literal t -> Source.string_of_literal t
+  | Primitive p -> Source.string_of_primitive p
+
 let rec target_to_cat_term (t:t) : cat_term =
   match t with
   (* Base cases *)
@@ -151,17 +173,6 @@ let simplify_proj (t:cat_term) : cat_term =
     | t -> t
   in
   map_cat_term simpl2 (map_compose_cat_term simpl (normalize_cat_term t))
-
-(*let test_valid_cat_term (t:cat_term) : cat_term =
-  let simpl lst =
-    match lst with
-    | [] -> assert false
-    | lst ->
-      if List.exists (function (_,Compose _,_) -> true | _ -> false) lst
-      then assert false
-      else lst
-  in
-  map_compose_cat_term simpl t*)
 
 (** [rewrite defs] applies category laws to remove [apply] and [curry]
     from the compiled programs. *)
