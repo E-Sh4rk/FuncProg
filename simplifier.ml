@@ -99,20 +99,21 @@ let map_compose_cat_term f (t:cat_term) : cat_term =
   map_cat_term simpl t
 
 (* Flatten nested compositions so it is easier to reason modulo associativity. *)
-(* Also remove empty compositions. *)
+(* Also remove empty or one-element compositions. *)
 let normalize_cat_term (t:cat_term) : cat_term =
-  let rm_empty_compose (t:cat_term) : cat_term =
+  let rm_useless_compose (t:cat_term) : cat_term =
     match t with
     | Compose (ok_in, ok_out, []) when ok_in = ok_out -> Identity ok_in
+    | Compose (ok_in, ok_out, [(ok_out',t,ok_in')]) when ok_in=ok_in' && ok_out=ok_out' -> t
     | Compose (ok_in, ok_out, lst) when List.length lst > 0 -> Compose (ok_in, ok_out, lst)
     | Compose _ -> assert false
     | t -> t
   in
-  let simpl lst =
+  let merge_compose lst =
     let lst = List.map (function (oka,Compose (_,_,lst),okb) -> lst | a -> [a]) lst in
     List.flatten lst
   in
-  map_compose_cat_term simpl (map_cat_term rm_empty_compose t)
+  map_compose_cat_term merge_compose (map_cat_term rm_useless_compose t)
 
 let simplify_id (t:cat_term) : cat_term =
   let simpl lst =
@@ -144,7 +145,12 @@ let simplify_proj (t:cat_term) : cat_term =
     | (_, Exr _, _)::(_, Fork (oka, _, okb, _, g), _)::lst -> simpl ((okb,g,oka)::lst)
     | a::lst -> a::(simpl lst)
   in
-  map_compose_cat_term simpl (normalize_cat_term t)
+  let simpl2 t =
+    match t with
+    | Fork (ok_a,_,_,Exl _, Exr _) -> Identity ok_a
+    | t -> t
+  in
+  map_cat_term simpl2 (map_compose_cat_term simpl (normalize_cat_term t))
 
 (*let test_valid_cat_term (t:cat_term) : cat_term =
   let simpl lst =
