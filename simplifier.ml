@@ -138,20 +138,34 @@ let normalize_cat_term (t:cat_term) : cat_term =
   in
   map_compose_cat_term merge_compose (map_cat_term rm_useless_compose t)
 
+let simplify_proj (t:cat_term) : cat_term =
+  let simpl t =
+    match t with
+    | Fork (ok_a,_,_,Exl _, Exr _) -> Identity ok_a
+    | t -> t
+  in
+  map_cat_term simpl (normalize_cat_term t)
+
 let simplify_id (t:cat_term) : cat_term =
   let simpl lst =
     List.filter (function (_,Identity _,_) -> false | _ -> true) lst
   in
   map_compose_cat_term simpl (normalize_cat_term t)
 
-let simplify_apply_curry_fork (t:cat_term) : cat_term = (* TODO: regroup all simplifications to the same function *)
+let simplify_compositions (t:cat_term) : cat_term =
   let rec simpl lst =
     match lst with
     | [] -> []
+    (* exl . (f Δ g) -> f *)
+    | (_, Exl _, _)::(_, Fork (oka, okb, _, f, _), _)::lst -> simpl ((okb,f,oka)::lst)
+    (* exr . (f Δ g) -> g *)
+    | (_, Exr _, _)::(_, Fork (oka, _, okb, _, g), _)::lst -> simpl ((okb,g,oka)::lst)
+    (* apply . ( (curry f) Δ t ) -> f . (Id Δ t) *)
     | (_, Apply _, _)::(_, Fork (ok_t1_t2_in, _, ok_t2_out, Curry (ok_f_in1,ok_f_in2,ok_f_out,f), t2), ok_fork_in)::lst ->
       let t1 = Identity ok_t1_t2_in in
       let ok_f_in = OkPair(ok_f_in1,ok_f_in2) in
       simpl ((ok_f_out,f,ok_f_in)::(ok_f_in,Fork(ok_t1_t2_in,ok_t1_t2_in,ok_t2_out,t1,t2),ok_fork_in)::lst)
+    (* apply . ( ((curry f) . t1) Δ t2 ) -> f . (t1 Δ t2) *)
     | (_, Apply _, _)::(_, Fork (ok_t1_t2_in, _, ok_t2_out, Compose (ok_t1_in,_,(_,Curry (ok_f_in1,ok_f_in2,ok_f_out,f),ok_t1_out)::lst'), t2), ok_fork_in)::lst ->
       let t1 = Compose (ok_t1_in,ok_t1_out,lst') in
       let ok_f_in = OkPair(ok_f_in1,ok_f_in2) in
@@ -162,21 +176,6 @@ let simplify_apply_curry_fork (t:cat_term) : cat_term = (* TODO: regroup all sim
     | a::lst -> a::(simpl lst)
   in
   map_compose_cat_term simpl (normalize_cat_term t)
-
-let simplify_proj (t:cat_term) : cat_term =
-  let rec simpl lst =
-    match lst with
-    | [] -> []
-    | (_, Exl _, _)::(_, Fork (oka, okb, _, f, _), _)::lst -> simpl ((okb,f,oka)::lst)
-    | (_, Exr _, _)::(_, Fork (oka, _, okb, _, g), _)::lst -> simpl ((okb,g,oka)::lst)
-    | a::lst -> a::(simpl lst)
-  in
-  let simpl2 t =
-    match t with
-    | Fork (ok_a,_,_,Exl _, Exr _) -> Identity ok_a
-    | t -> t
-  in
-  map_cat_term simpl2 (map_compose_cat_term simpl (normalize_cat_term t))
 
 (** [rewrite defs] applies category laws to remove [apply] and [curry]
     from the compiled programs. *)
@@ -190,9 +189,9 @@ let rewrite : Target.program -> Target.program = fun defs ->
       while !old_res <> (Some !res)
       do
         old_res := Some (!res) ;
+        res := simplify_proj (!res) ;
         res := simplify_id (!res) ;
-        res := simplify_apply_curry_fork (!res) ;
-        res := simplify_proj (!res)
+        res := simplify_compositions (!res)
       done ;
 
       let ct = !res in
