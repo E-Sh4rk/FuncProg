@@ -3,12 +3,11 @@ open Target
 type cat_term =
   | Identity of ok
   | Curry of ok * ok * ok * cat_term
-  | UnCurry of ok * ok * ok * cat_term (* TODO: don't allow uncurry *)
   | Apply of ok * ok
   | Fork of ok * ok * ok * cat_term * cat_term
   | Exl of ok * ok
   | Exr of ok * ok
-  | UnitArrow of ok * cat_term (* TODO: restricts to literal *)
+  | UnitArrow of ok * Source.literal (* We only allow literals for UnitArrow because UnitArrow simplification is not supported. *)
   | It of ok
   | Compose of ok * ok * ((ok * cat_term * ok) list) (* global_ok_domain, global_ok_codomain,[ok_codomain, morphism, ok_domain] *)
   | Literal of Source.literal
@@ -25,15 +24,14 @@ and string_of_cat_term (t:cat_term) : string =
   match t with
   | Identity _ -> "Id"
   | Curry (_,_,_,t) -> Printf.sprintf "Curry(%s)" (string_of_cat_term t)
-  | UnCurry (_,_,_,t) -> Printf.sprintf "UnCurry(%s)" (string_of_cat_term t)
   | Apply _ -> "Apply"
   | Fork (_,_,_,t1,t2) -> Printf.sprintf "(%s) Δ (%s)" (*"Fork(%s,%s)"*) (string_of_cat_term t1) (string_of_cat_term t2)
   | Exl _ -> "Exl"
   | Exr _ -> "Exr"
-  | UnitArrow (_,t) -> Printf.sprintf "UnitArrow(%s)" (string_of_cat_term t)
+  | UnitArrow (_,l) -> Printf.sprintf "UnitArrow(%s)" (Source.string_of_literal l)
   | It _ -> "It"
   | Compose (a,b,c) -> string_of_compose (a,b,c)
-  | Literal t -> Source.string_of_literal t
+  | Literal l -> Source.string_of_literal l
   | Primitive p -> Source.string_of_primitive p
 
 let rec target_to_cat_term (t:t) : cat_term =
@@ -50,11 +48,12 @@ let rec target_to_cat_term (t:t) : cat_term =
   | App ((Curry (oka, okb, okc)), a) ->
     Curry (oka, okb, okc, target_to_cat_term a)
   | App ((UnCurry (oka, okb, okc)), a) ->
-    UnCurry (oka, okb, okc, target_to_cat_term a)
+    failwith "UnCurry is not supported by the simplifier."
   | App (App ((Fork (oka, okb, okc)), a1), a2) ->
     Fork (oka, okb, okc, target_to_cat_term a1, target_to_cat_term a2)
-  | App (UnitArrow ok, a) ->
-    UnitArrow (ok, target_to_cat_term a)
+  | App (UnitArrow ok, Literal l) ->
+    UnitArrow (ok, l)
+  | App (UnitArrow ok, _) -> failwith "Only unit arrows of literals are supported by the simplifier."
   (* Case of compose *)
   | App (App ((Compose (oka, okb, okc)), a1), a2) ->
     let t1 = target_to_cat_term a1 in
@@ -75,12 +74,10 @@ let rec cat_term_to_target (t:cat_term) : t =
   (* Inductive cases *)
   | Curry (oka, okb, okc, a) ->
     curry oka okb okc (cat_term_to_target a)
-  | UnCurry (oka, okb, okc, a) ->
-    uncurry oka okb okc (cat_term_to_target a)
   | Fork (oka, okb, okc, a, b) ->
     fork oka okb okc (cat_term_to_target a) (cat_term_to_target b)
-  | UnitArrow (ok, a) ->
-    unit_arrow ok (cat_term_to_target a)
+  | UnitArrow (ok, l) ->
+    unit_arrow ok (Literal l)
   (* Case of compose *)
   | Compose (ok_in, ok_out, []) when ok_in = ok_out -> Identity ok_in
   | Compose (_, _, lst) when List.length lst > 0 ->
@@ -99,12 +96,11 @@ let rec map_cat_term f (t:cat_term) : cat_term =
   match t with
   | Identity ok -> f (Identity ok)
   | Curry (oka,okb,okc,a) -> f (Curry (oka,okb,okc,map_cat_term f a))
-  | UnCurry (oka,okb,okc,a) -> f (UnCurry (oka,okb,okc,map_cat_term f a))
   | Apply (oka,okb) -> f (Apply (oka,okb))
   | Fork (oka,okb,okc,a1,a2) -> f (Fork (oka,okb,okc,map_cat_term f a1,map_cat_term f a2))
   | Exl (oka,okb) -> f (Exl (oka,okb))
   | Exr (oka,okb) -> f (Exr (oka,okb))
-  | UnitArrow (ok,a) -> f (UnitArrow (ok,map_cat_term f a))
+  | UnitArrow (ok,lit) -> f (UnitArrow (ok,lit))
   | It ok -> f (It ok)
   | Compose (ok_in,ok_out,lst) ->
     let lst = List.map (fun (oka,t,okb) -> (oka,map_cat_term f t,okb)) lst in
@@ -119,6 +115,11 @@ let map_compose_cat_term f (t:cat_term) : cat_term =
     | t -> t
   in
   map_cat_term simpl t
+
+let make_compose lst =
+  let (ok_out, _, _) = List.hd lst in
+  let (_, _, ok_in) = List.nth lst ((List.length lst)-1) in
+  Compose (ok_in,ok_out,lst)
 
 (* Flatten nested compositions so it is easier to reason modulo associativity. *)
 (* Also remove empty or one-element compositions. *)
@@ -151,14 +152,14 @@ let simplify_apply_curry_fork (t:cat_term) : cat_term = (* TODO: regroup all sim
       let t1 = Identity ok_t1_t2_in in
       let ok_f_in = OkPair(ok_f_in1,ok_f_in2) in
       simpl ((ok_f_out,f,ok_f_in)::(ok_f_in,Fork(ok_t1_t2_in,ok_t1_t2_in,ok_t2_out,t1,t2),ok_fork_in)::lst)
-    | (_, Apply _, _)::(_, Fork (ok_t1_t2_in, _, ok_t2_out, Compose (ok_t1_in,_,(_,Curry (ok_f_in1,ok_f_in2,ok_f_out,f),ok_t1_out)::lst'), t2), ok_fork_in)::lst ->
-      let t1 = Compose (ok_t1_in,ok_t1_out,lst') in
+    | (_, Apply _, _)::(_, Fork (ok_t1_t2_in, _, ok_t2_out, Compose (_,_,(_,Curry (ok_f_in1,ok_f_in2,ok_f_out,f),ok_t1_out)::lst'), t2), ok_fork_in)::lst ->
+      let t1 = make_compose lst' in
       let ok_f_in = OkPair(ok_f_in1,ok_f_in2) in
       simpl ((ok_f_out,f,ok_f_in)::(ok_f_in,Fork(ok_t1_t2_in,ok_t1_out,ok_t2_out,t1,t2),ok_fork_in)::lst)
     (* (u Δ v) . w  -> (u . w) Δ (v . w) *)
     | (ok_out,Fork(_,out_u,out_v,u,v),_)::(out_w,w,in_w)::lst ->
       (* TODO: Add function to pack in a compose *)
-      simpl ((ok_out, Fork(in_w,out_u,out_v,Compose(in_w,out_u,[(out_u,u,out_w);(out_w,w,in_w)]),Compose(in_w,out_v,[(out_v,v,out_w);(out_w,w,in_w)])),in_w)::lst)
+      simpl ((ok_out, Fork(in_w,out_u,out_v,make_compose [(out_u,u,out_w);(out_w,w,in_w)],make_compose [(out_v,v,out_w);(out_w,w,in_w)]),in_w)::lst)
     | a::lst -> a::(simpl lst)
   in
   map_compose_cat_term simpl (normalize_cat_term t)
