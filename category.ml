@@ -958,7 +958,7 @@ end
   (*-------------------------------------------------*)
 
   let negC =
-    linearD (fun x -> C.Num.neg x) C.negC
+    linearD C.Num.neg C.negC
 
   let addC =
     linearD (fun (x,y) -> C.Num.add x y) C.addC
@@ -968,7 +968,7 @@ end
 
   (*
   let nablaC x y =
-    C.compose (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) C.ok_t (C.jam C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y) 
+    C.compose (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) C.ok_t (C.jam C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y)
 
   let deltaC x y =
     C.compose C.ok_t (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y) (C.dup C.ok_t)
