@@ -859,7 +859,7 @@ end
     D (fun a -> ((), C.it (snd oka)))
 
   let unit_arrow (type a) (oka : a ok) x : (unit, a) k =
-    D (fun () -> (x, C.unit_arrow (snd oka) x))
+    D (fun () -> (x, C.ti (snd oka)))
 
    let ok_unit =
      ((module AdditiveUnit : Additive with type t = unit), C.ok_unit)
