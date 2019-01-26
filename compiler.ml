@@ -154,8 +154,8 @@ let pack_program (s:Source.program) : (binding * term) =
 let source_to_categories : Source.program -> Target.program = fun source ->
 
    let rec accumulate l = match l with
-    | []   -> [[]]
-    | h::l -> List.map (fun l -> h::l) (accumulate l)
+    | []   -> []
+    | h::l -> List.map (fun l -> h::l) ([]::(accumulate l))
    in
 
    let source = List.map pack_program (accumulate source) in

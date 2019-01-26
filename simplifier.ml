@@ -3,7 +3,7 @@ open Target
 type cat_term =
   | Identity of ok
   | Curry of ok * ok * ok * cat_term
-  | UnCurry of ok * ok * ok * cat_term
+  | UnCurry of ok * ok * ok * cat_term (* TODO: don't allow uncurry *)
   | Apply of ok * ok
   | Fork of ok * ok * ok * cat_term * cat_term
   | Exl of ok * ok
