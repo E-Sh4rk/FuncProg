@@ -10,7 +10,7 @@ type cat_term =
   | Exr of ok * ok
   | UnitArrow of ok * cat_term
   | It of ok
-  | Compose of (ok * cat_term * ok) list (* ok_codomain, morphism, ok_domain *)
+  | Compose of ok * ok * ((ok * cat_term * ok) list) (* global_ok_domain, global_ok_codomain,[ok_codomain, morphism, ok_domain] *)
   | Literal of Source.literal
   | Primitive of Source.primitive
 
@@ -37,7 +37,7 @@ let rec target_to_cat_term (t:t) : cat_term =
   | App (App ((Compose (oka, okb, okc)), a1), a2) ->
     let t1 = target_to_cat_term a1 in
     let t2 = target_to_cat_term a2 in
-    Compose [(okc,t1,okb) ; (okb,t2,oka)]
+    Compose (oka, okc, [(okc,t1,okb) ; (okb,t2,oka)])
   | _ -> assert false
 
 let rec cat_term_to_target (t:cat_term) : t =
@@ -60,7 +60,8 @@ let rec cat_term_to_target (t:cat_term) : t =
   | UnitArrow (ok, a) ->
     unit_arrow ok (cat_term_to_target a)
   (* Case of compose *)
-  | Compose lst ->
+  | Compose (ok_in, ok_out, []) when ok_in = ok_out -> Identity ok_in
+  | Compose (_, _, lst) when List.length lst > 0 ->
     let lst = List.map (fun (okb,a,oka) -> (okb,cat_term_to_target a,oka)) lst in
     let rec aux lst = match lst with
       | [(_, t, _)] -> t
@@ -70,6 +71,7 @@ let rec cat_term_to_target (t:cat_term) : t =
       | _ -> assert false
     in
     aux lst
+  | Compose _ -> assert false
 
 let rec map_cat_term f (t:cat_term) : cat_term =
   match t with
@@ -82,32 +84,39 @@ let rec map_cat_term f (t:cat_term) : cat_term =
   | Exr (oka,okb) -> f (Exr (oka,okb))
   | UnitArrow (ok,a) -> f (UnitArrow (ok,map_cat_term f a))
   | It ok -> f (It ok)
-  | Compose lst ->
+  | Compose (ok_in,ok_out,lst) ->
     let lst = List.map (fun (oka,t,okb) -> (oka,map_cat_term f t,okb)) lst in
-    f (Compose lst)
+    f (Compose (ok_in, ok_out, lst))
   | Literal lit -> f (Literal lit)
   | Primitive prim -> f (Primitive prim)
 
 let map_compose_cat_term f (t:cat_term) : cat_term =
   let simpl (t:cat_term) : cat_term =
     match t with
-    | Compose lst -> Compose (f lst)
+    | Compose (ok_in, ok_out, lst) -> Compose (ok_in, ok_out, f lst)
     | t -> t
   in
   map_cat_term simpl t
 
 (* Flatten nested compositions so it is easier to reason modulo associativity. *)
+(* Also remove empty compositions. *)
 let normalize_cat_term (t:cat_term) : cat_term =
+  let rm_empty_compose (t:cat_term) : cat_term =
+    match t with
+    | Compose (ok_in, ok_out, []) when ok_in = ok_out -> Identity ok_in
+    | Compose (ok_in, ok_out, lst) when List.length lst > 0 -> Compose (ok_in, ok_out, lst)
+    | Compose _ -> assert false
+    | t -> t
+  in
   let simpl lst =
-    let lst = List.map (function (oka,Compose lst,okb) -> lst | a -> [a]) lst in
+    let lst = List.map (function (oka,Compose (_,_,lst),okb) -> lst | a -> [a]) lst in
     List.flatten lst
   in
-  map_compose_cat_term simpl t
+  map_compose_cat_term simpl (map_cat_term rm_empty_compose t)
 
 let simplify_id (t:cat_term) : cat_term =
   let simpl lst =
-    let lst' = List.filter (function (_,Identity _,_) -> false | _ -> true) lst in
-    if List.length lst' = 0 then [List.hd lst] (* Empty compositions are not allowed *) else lst'
+    List.filter (function (_,Identity _,_) -> false | _ -> true) lst
   in
   map_compose_cat_term simpl (normalize_cat_term t)
 
@@ -119,10 +128,8 @@ let simplify_apply_curry (t:cat_term) : cat_term =
       let t1 = Identity ok_t1_t2_in in
       let ok_f_in = OkPair(ok_f_in1,ok_f_in2) in
       simpl ((ok_f_out,f,ok_f_in)::(ok_f_in,Fork(ok_t1_t2_in,ok_t1_t2_in,ok_t2_out,t1,t2),ok_fork_in)::lst)
-    | (_, Apply _, _)::(_, Fork (ok_t1_t2_in, _, ok_t2_out, Compose ((_,Curry (ok_f_in1,ok_f_in2,ok_f_out,f),ok_t1_out)::lst'), t2), ok_fork_in)::lst ->
-      let t1 = if List.length lst' = 0
-        then Identity ok_t1_out
-        else Compose lst' in
+    | (_, Apply _, _)::(_, Fork (ok_t1_t2_in, _, ok_t2_out, Compose (ok_t1_in,_,(_,Curry (ok_f_in1,ok_f_in2,ok_f_out,f),ok_t1_out)::lst'), t2), ok_fork_in)::lst ->
+      let t1 = Compose (ok_t1_in,ok_t1_out,lst') in
       let ok_f_in = OkPair(ok_f_in1,ok_f_in2) in
       simpl ((ok_f_out,f,ok_f_in)::(ok_f_in,Fork(ok_t1_t2_in,ok_t1_out,ok_t2_out,t1,t2),ok_fork_in)::lst)
     | a::lst -> a::(simpl lst)
