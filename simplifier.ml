@@ -7,7 +7,7 @@ type cat_term =
   | Fork of ok * ok * ok * cat_term * cat_term
   | Exl of ok * ok
   | Exr of ok * ok
-  | UnitArrow of ok * Source.literal (* We only allow literals for UnitArrow because UnitArrow simplification is not supported. *)
+  | UnitArrow of ok * cat_term
   | It of ok
   | Compose of ok * ok * ((ok * cat_term * ok) list) (* global_ok_domain, global_ok_codomain,[ok_codomain, morphism, ok_domain] *)
   | Literal of Source.literal
@@ -28,7 +28,7 @@ and string_of_cat_term (t:cat_term) : string =
   | Fork (_,_,_,t1,t2) -> Printf.sprintf "(%s) Δ (%s)" (*"Fork(%s,%s)"*) (string_of_cat_term t1) (string_of_cat_term t2)
   | Exl _ -> "Exl"
   | Exr _ -> "Exr"
-  | UnitArrow (_,l) -> Printf.sprintf "UnitArrow(%s)" (Source.string_of_literal l)
+  | UnitArrow (_,t) -> Printf.sprintf "UnitArrow(%s)" (string_of_cat_term t)
   | It _ -> "It"
   | Compose (a,b,c) -> string_of_compose (a,b,c)
   | Literal l -> Source.string_of_literal l
@@ -51,9 +51,8 @@ let rec target_to_cat_term (t:t) : cat_term =
     failwith "UnCurry is not supported by the simplifier."
   | App (App ((Fork (oka, okb, okc)), a1), a2) ->
     Fork (oka, okb, okc, target_to_cat_term a1, target_to_cat_term a2)
-  | App (UnitArrow ok, Literal l) ->
-    UnitArrow (ok, l)
-  | App (UnitArrow ok, _) -> failwith "Only unit arrows of literals are supported by the simplifier."
+  | App (UnitArrow ok, a) ->
+    UnitArrow (ok, target_to_cat_term a)
   (* Case of compose *)
   | App (App ((Compose (oka, okb, okc)), a1), a2) ->
     let t1 = target_to_cat_term a1 in
@@ -76,8 +75,8 @@ let rec cat_term_to_target (t:cat_term) : t =
     curry oka okb okc (cat_term_to_target a)
   | Fork (oka, okb, okc, a, b) ->
     fork oka okb okc (cat_term_to_target a) (cat_term_to_target b)
-  | UnitArrow (ok, l) ->
-    unit_arrow ok (Literal l)
+  | UnitArrow (ok, a) ->
+    unit_arrow ok (cat_term_to_target a)
   (* Case of compose *)
   | Compose (ok_in, ok_out, []) when ok_in = ok_out -> Identity ok_in
   | Compose (_, _, lst) when List.length lst > 0 ->
@@ -100,7 +99,7 @@ let rec map_cat_term f (t:cat_term) : cat_term =
   | Fork (oka,okb,okc,a1,a2) -> f (Fork (oka,okb,okc,map_cat_term f a1,map_cat_term f a2))
   | Exl (oka,okb) -> f (Exl (oka,okb))
   | Exr (oka,okb) -> f (Exr (oka,okb))
-  | UnitArrow (ok,lit) -> f (UnitArrow (ok,lit))
+  | UnitArrow (ok,a) -> f (UnitArrow (ok,map_cat_term f a))
   | It ok -> f (It ok)
   | Compose (ok_in,ok_out,lst) ->
     let lst = List.map (fun (oka,t,okb) -> (oka,map_cat_term f t,okb)) lst in
