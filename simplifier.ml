@@ -27,7 +27,7 @@ and string_of_cat_term (t:cat_term) : string =
   | Curry (_,_,_,t) -> Printf.sprintf "Curry(%s)" (string_of_cat_term t)
   | UnCurry (_,_,_,t) -> Printf.sprintf "UnCurry(%s)" (string_of_cat_term t)
   | Apply _ -> "Apply"
-  | Fork (_,_,_,t1,t2) -> Printf.sprintf (*"(%s Δ %s)"*) "Fork(%s,%s)" (string_of_cat_term t1) (string_of_cat_term t2)
+  | Fork (_,_,_,t1,t2) -> Printf.sprintf "(%s) Δ (%s)" (*"Fork(%s,%s)"*) (string_of_cat_term t1) (string_of_cat_term t2)
   | Exl _ -> "Exl"
   | Exr _ -> "Exr"
   | UnitArrow (_,t) -> Printf.sprintf "UnitArrow(%s)" (string_of_cat_term t)
@@ -199,6 +199,8 @@ let rewrite : Target.program -> Target.program = fun defs ->
       let ct = simplify_id ct in
       let ct = simplify_apply_curry ct in
       let ct = simplify_proj ct in
+
+      (* Printf.printf "%s\n" (string_of_cat_term ct) ; flush_all () ; *)
 
       (b, cat_term_to_target ct)
     in
