@@ -963,9 +963,6 @@ end
   let addC =
     linearD (fun (x,y) -> C.Num.add x y) C.addC
 
-  let nablaC (x:(C.t, C.t) C.k) (y:(C.t, C.t) C.k) =
-    let module A = CoCartesianCatDerivedOperations(C) in A.join C.ok_t C.ok_t C.ok_t (x, y)
-
   (*
   let nablaC x y =
     C.compose (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) C.ok_t (C.jam C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y)
@@ -974,11 +971,14 @@ end
     C.compose C.ok_t (C.ok_pair C.ok_t C.ok_t) (C.ok_pair C.ok_t C.ok_t) (C.pair C.ok_t C.ok_t C.ok_t C.ok_t x y) (C.dup C.ok_t)
   *)
 
+  let join_t (x:(C.t, C.t) C.k) (y:(C.t, C.t) C.k) =
+    let module A = CoCartesianCatDerivedOperations(C) in A.join C.ok_t C.ok_t C.ok_t (x, y)
+
   let mulC =
     D (fun (x,y) ->
       let scale_x = C.scale x in
       let scale_y = C.scale y in
-      (C.Num.mul x y, nablaC scale_y scale_x)
+      (C.Num.mul x y, join_t scale_y scale_x)
     )
 
   let sinC =
