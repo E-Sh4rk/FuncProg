@@ -137,25 +137,24 @@ let normalize_cat_term (t:cat_term) : cat_term =
   in
   map_compose_cat_term merge_compose (map_cat_term rm_useless_compose t)
 
-let simplify_proj (t:cat_term) : cat_term =
+let simplify_terms (t:cat_term) : cat_term =
   let simpl t =
     match t with
+    (* exl Δ exr -> id *)
     | Fork (ok_a,_,_,Exl _, Exr _) -> Identity ok_a
     | t -> t
   in
   map_cat_term simpl (normalize_cat_term t)
 
-let simplify_id (t:cat_term) : cat_term =
-  let simpl lst =
-    List.filter (function (_,Identity _,_) -> false | _ -> true) lst
-  in
-  map_compose_cat_term simpl (normalize_cat_term t)
-
 let simplify_compositions (t:cat_term) : cat_term =
   let rec simpl lst =
     match lst with
     | [] -> []
-    (* it . f = it *)
+    (* f . id -> f *)
+    | (f_out, f, f_in)::(_, Identity _, _)::lst -> simpl ((f_out, f, f_in)::lst)
+    (* id . g -> g *)
+    | (_, Identity _, _)::(g_out, g, g_in)::lst -> simpl ((g_out, g, g_in)::lst)
+    (* it . f -> it *)
     | (it_out, It _, _)::(_, f, f_in)::lst -> simpl ((it_out, It f_in, f_in)::lst)
     (* exl . (f Δ g) -> f *)
     | (_, Exl _, _)::(_, Fork (oka, okb, _, f, _), _)::lst -> simpl ((okb,f,oka)::lst)
@@ -190,8 +189,7 @@ let rewrite : Target.program -> Target.program = fun defs ->
       while !old_res <> (Some !res)
       do
         old_res := Some (!res) ;
-        res := simplify_proj (!res) ;
-        res := simplify_id (!res) ;
+        res := simplify_terms (!res) ;
         res := simplify_compositions (!res)
       done ;
 
