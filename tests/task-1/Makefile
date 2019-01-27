@@ -7,4 +7,4 @@ all:
 
 clean:
 	ocamlbuild -clean testsuite.byte
-	rm -f *~
+	rm -f *~ category.ml

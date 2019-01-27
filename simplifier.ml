@@ -155,6 +155,8 @@ let simplify_compositions (t:cat_term) : cat_term =
   let rec simpl lst =
     match lst with
     | [] -> []
+    (* it . f = it *)
+    | (it_out, It _, _)::(_, f, f_in)::lst -> simpl ((it_out, It f_in, f_in)::lst)
     (* exl . (f Δ g) -> f *)
     | (_, Exl _, _)::(_, Fork (oka, okb, _, f, _), _)::lst -> simpl ((okb,f,oka)::lst)
     (* exr . (f Δ g) -> g *)

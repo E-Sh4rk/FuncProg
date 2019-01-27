@@ -9,4 +9,4 @@ all:
 	./test.sh tiny_mlp
 
 clean:
-	rm -f *.cmo *.cmx *.cmi *.o tiny_mlp.j tiny_mlp_test.ml *~ *.log *_test
+	rm -f *.cmo *.cmx *.cmi *.o tiny_mlp.j tiny_mlp.ml tiny_mlp_test.ml category.ml *~ *.log *_test
