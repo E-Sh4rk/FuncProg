@@ -42,7 +42,7 @@ let train : training_set -> net = fun tset ->
       res := update_net (!res) (-.diff1) (-.diff2)
     
     in List.iter train_on tset ;
-    print_net !res
+    (* print_net !res ; Printf.printf "%f\n" (eval_net !res tset) *)
   done ;
   !res
 
