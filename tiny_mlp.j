@@ -1,4 +1,8 @@
 
+let (sigmoid : float -> float) =
+    fun (x : float) ->
+      inv (1 + exp (neg x))
+
 (*
 
   [nn ((x, y), (wxu, wyu))] returns the output [u] of the Multi-Layer Perceptron
@@ -16,7 +20,10 @@ let nn (p :
        (* weights *) (float * float))
        (* output  *) : float
 =
-   0.
+   let (inputs : float * float) = fst p in
+   let (weights : float * float) = snd p in
+   let (scal : float) = (fst inputs) * (fst weights) + (snd inputs) * (snd weights) in
+   sigmoid scal
 
 (*
 
