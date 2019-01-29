@@ -141,7 +141,9 @@ let simplify_terms (t:cat_term) : cat_term =
   let simpl t =
     match t with
     (* exl Δ exr -> id *)
-    | Fork (ok_a,_,_,Exl _, Exr _) -> Identity ok_a
+    | Fork (ok_in,_,_,Exl _, Exr _) -> Identity ok_in
+    (* curry(apply) -> id *)
+    | Curry (_,_,ok_out,Apply _) -> Identity ok_out
     | t -> t
   in
   map_cat_term simpl (normalize_cat_term t)

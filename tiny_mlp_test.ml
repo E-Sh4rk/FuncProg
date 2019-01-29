@@ -28,7 +28,7 @@ let print_net (w1, w2) = Printf.printf "%f %f\n" w1 w2
 (** [train training_set] returns a neural network trained for the
     [training_set]. *)
 let train : training_set -> net = fun tset ->
-  let eps = (*DiffCat.epsilon*) 1. in
+  let eps = DiffCat.epsilon (*1.*) in
   let res = ref (make_net (0.) (0.)) in
   while eval_net !res tset >= acceptable_error
   do
