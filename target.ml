@@ -21,16 +21,16 @@ and ok =
   | OkArrow of ok * ok
 
 let compose oka okb okc a1 a2 =
-  App (App ((Compose (oka, okb, okc)), a1), a2)
+  App (App (Compose (oka, okb, okc), a1), a2)
 
 let fork oka okb okc a1 a2 =
-  App (App ((Fork (oka, okb, okc)), a1), a2)
+  App (App (Fork (oka, okb, okc), a1), a2)
 
 let curry oka okb okc a =
-  App ((Curry (oka, okb, okc)), a)
+  App (Curry (oka, okb, okc), a)
 
 let uncurry oka okb okc a =
-  App ((UnCurry (oka, okb, okc)), a)
+  App (UnCurry (oka, okb, okc), a)
 
 let unit_arrow ok a =
   App (UnitArrow ok, a)
