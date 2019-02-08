@@ -161,11 +161,24 @@ let rec w env (t:untyped_term) =
     let (subst, tt) = w env' t.value in
     (subst, TtArrow (substitute_tt subst typ, tt))
 
-  | Pair (u,v) -> failwith "TODO"
+  | Pair (u,v) ->
+    let (u_subst, u_t) = w env u.value in
+    let (v_subst, v_t) = w (substitute_env u_subst env) v.value in
+    (compose_subst v_subst u_subst, TtPair (substitute_tt v_subst u_t, v_t))
 
-  | Fst t -> failwith "TODO"
+  | Fst t ->
+    let (t_subst, t_t) = w env t.value in
+    let final_vartype = fresh_vartype () in
+    let dummy_vartype = fresh_vartype () in
+    let mgu_subst = mgu [Eq (t_t, TtPair (TtVar final_vartype, TtVar dummy_vartype))] in
+    (compose_subst mgu_subst t_subst, substitute_var mgu_subst final_vartype)
 
-  | Snd t -> failwith "TODO"
+  | Snd t ->
+    let (t_subst, t_t) = w env t.value in
+    let final_vartype = fresh_vartype () in
+    let dummy_vartype = fresh_vartype () in
+    let mgu_subst = mgu [Eq (t_t, TtPair (TtVar dummy_vartype, TtVar final_vartype))] in
+    (compose_subst mgu_subst t_subst, substitute_var mgu_subst final_vartype)
 
   | Literal lit ->
     (id_subst, typ_to_typ_term (Typechecker.type_of_lit lit))
