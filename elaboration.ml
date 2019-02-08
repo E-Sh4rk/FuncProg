@@ -146,6 +146,7 @@ let rec w env (t:untyped_term) =
   | App (t,u) ->
     let (u_subst, u_t) = w env u.value in
     let (t_subst, t_t) = w (substitute_env u_subst env) t.value in
+    let u_t = substitute_tt t_subst u_t in
     let final_vartype = fresh_vartype () in
     let mgu_subst = mgu [Eq (t_t, TtArrow (u_t, TtVar final_vartype))] in
     (compose_subst mgu_subst (compose_subst t_subst u_subst), substitute_var mgu_subst final_vartype)
@@ -157,14 +158,16 @@ let rec w env (t:untyped_term) =
       | Some typ -> typ_to_typ_term typ
     end in
     
-    let env' = IdMap.add var_id typ env in
-    let (subst, tt) = w env' t.value in
-    (subst, TtArrow (substitute_tt subst typ, tt))
+    let env = IdMap.add var_id typ env in
+    let (subst, tt) = w env t.value in
+    let typ = substitute_tt subst typ in
+    (subst, TtArrow (typ, tt))
 
   | Pair (u,v) ->
     let (u_subst, u_t) = w env u.value in
     let (v_subst, v_t) = w (substitute_env u_subst env) v.value in
-    (compose_subst v_subst u_subst, TtPair (substitute_tt v_subst u_t, v_t))
+    let u_t = substitute_tt v_subst u_t in
+    (compose_subst v_subst u_subst, TtPair (u_t, v_t))
 
   | Fst t ->
     let (t_subst, t_t) = w env t.value in
@@ -186,4 +189,25 @@ let rec w env (t:untyped_term) =
   | Primitive p ->
     (id_subst, typ_to_typ_term (Typechecker.type_of_prim p))
 
+let rec w_program env (prog:untyped_program) =
+  match prog with
+  | [] -> failwith "Can't elaborate an empty program!"
+
+  | (binding,t)::prog -> (* Play the role of a 'let' *)
+
+    let (var_id, (typ_opt,typ_id)) = binding.value in
+    let typ = begin match typ_opt with
+      | None -> TtVar typ_id
+      | Some typ -> typ_to_typ_term typ
+    end in
+    
+    let (subst1, tt1) = w env t.value in
+    let env = IdMap.add var_id tt1 (substitute_env subst1 env) in
+    let typ = substitute_tt subst1 typ in
+
+    let mgu_subst = mgu [Eq (typ, tt1)] in
+    let env = substitute_env mgu_subst env in
+
+    let (subst2, tt2) = w_program env prog in
+    (compose_subst subst2 (compose_subst mgu_subst subst1), tt2)
 
