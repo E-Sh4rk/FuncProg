@@ -121,13 +121,18 @@ let rec typ_to_typ_term t =
 
 let rec closed_typ_term_to_typ tt =
   match tt with
-  | TtVar _ -> assert false
+  | TtVar _ -> failwith "Type term is not closed. Elaboration seems to have many solutions."
   | TtConstant c -> TyConstant c
   | TtPair (tt1,tt2) -> TyPair (closed_typ_term_to_typ tt1, closed_typ_term_to_typ tt2)
   | TtArrow (tt1,tt2) -> TyArrow (closed_typ_term_to_typ tt1, closed_typ_term_to_typ tt2)
 
 let substitute_env s env =
   IdMap.map (substitute_tt s) env
+
+let typ_opt_to_tt (typ_opt,typ_id) =
+  match typ_opt with
+  | None -> TtVar typ_id
+  | Some typ -> typ_to_typ_term typ
 
 (*
 Arguments:
@@ -151,14 +156,11 @@ let rec w env (t:untyped_term) =
     let mgu_subst = mgu [Eq (t_t, TtArrow (u_t, TtVar final_vartype))] in
     (compose_subst mgu_subst (compose_subst t_subst u_subst), substitute_var mgu_subst final_vartype)
 
-  | Lam ((var_id, (typ_opt,typ_id)),t) ->
+  | Lam ((var_id, typ_opt),t) ->
 
-    let typ = begin match typ_opt with
-      | None -> TtVar typ_id
-      | Some typ -> typ_to_typ_term typ
-    end in
-    
+    let typ = typ_opt_to_tt typ_opt in
     let env = IdMap.add var_id typ env in
+
     let (subst, tt) = w env t.value in
     let typ = substitute_tt subst typ in
     (subst, TtArrow (typ, tt))
@@ -195,11 +197,8 @@ let rec w_program env (prog:untyped_program) =
 
   | (binding,t)::prog -> (* Play the role of a 'let' *)
 
-    let (var_id, (typ_opt,typ_id)) = binding.value in
-    let typ = begin match typ_opt with
-      | None -> TtVar typ_id
-      | Some typ -> typ_to_typ_term typ
-    end in
+    let (var_id, typ_opt) = binding.value in
+    let typ = typ_opt_to_tt typ_opt in
     
     let (subst1, tt1) = w env t.value in
     let env = IdMap.add var_id tt1 (substitute_env subst1 env) in
@@ -211,3 +210,33 @@ let rec w_program env (prog:untyped_program) =
     let (subst2, tt2) = w_program env prog in
     (compose_subst subst2 (compose_subst mgu_subst subst1), tt2)
 
+let elaborate_program (prog:untyped_program) =
+  let (subst,_) = w_program IdMap.empty prog in
+  let rec convert_term (t:untyped_term Position.located) : term' Position.located =
+    let term = t.Position.value in
+    let new_term =
+      match term with
+      | Var id -> Var id
+      | App (t1, t2) -> App (convert_term t1, convert_term t2)
+      | Lam ((var_id,typ_opt), t) ->
+        let typ = typ_opt_to_tt typ_opt in
+        let typ = substitute_tt subst typ in
+        let typ = closed_typ_term_to_typ typ in
+        Lam ((var_id,typ), convert_term t)
+      | Pair (t1, t2) -> Pair (convert_term t1, convert_term t2)
+      | Fst t -> Fst (convert_term t)
+      | Snd t -> Snd (convert_term t)
+      | Literal lit -> Literal lit
+      | Primitive prim -> Primitive prim
+    in { t with value=new_term }
+  in
+  let convert_binding (binding,t) =
+    let (var_id, typ_opt) = binding.Position.value in
+    let typ = typ_opt_to_tt typ_opt in
+    let typ = substitute_tt subst typ in
+    let typ = closed_typ_term_to_typ typ in
+    let new_binding = { binding with value=(var_id,typ) } in
+    (new_binding, convert_term t)
+  in
+  List.map convert_binding prog
+  
