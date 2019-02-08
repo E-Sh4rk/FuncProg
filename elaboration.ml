@@ -116,9 +116,16 @@ let rec unify cs =
   try unify (simplify_constraints cs)
   with NothingDone cs -> cs
 
-let rec typ_term_to_typ subst typ =
-  failwith "TODO"
+let rec closed_typ_term_to_typ tt =
+  match tt with
+  | TtVar _ -> assert false
+  | TtConstant c -> TyConstant c
+  | TtPair (tt1,tt2) -> TyPair (closed_typ_term_to_typ tt1, closed_typ_term_to_typ tt2)
+  | TtArrow (tt1,tt2) -> TyArrow (closed_typ_term_to_typ tt1, closed_typ_term_to_typ tt2)
 
 (* ----- ELABORATION USING A KIND OF W-- ALGORITHM ----- *)
+
+let rec w t = (* Returns (subst, type term) *)
+  failwith "TODO"
 
 
