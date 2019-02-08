@@ -1,6 +1,6 @@
 open Source
 
-(* ----- UNIFICATION USING Martelli & Montanari ALGORITHM ----- *)
+(* ----- UNIFICATION ----- *)
 
 type vartype = int
 
@@ -12,9 +12,35 @@ type typ_term =
 
 type typ_constr = Eq of typ_term * typ_term
 
+(* Substitutions *)
+
 module Subst = Map.Make(struct type t = vartype let compare = compare end)
+
+let id_subst = Subst.empty
+
+let singleton v k = Subst.singleton v k
+
+let substitue_var s v =
+  if Subst.mem v s
+  then Subst.find v s
+  else TtVar v
+
+let rec substitute_tt s tt =
+  match tt with
+  | TtVar v -> substitue_var s v
+  | TtPair (a,b) -> TtPair (substitute_tt s a, substitute_tt s b)
+  | TtArrow (a,b) -> TtArrow (substitute_tt s a, substitute_tt s b)
+  | TtConstant c -> TtConstant c
+
+let compose_subst s1 s2 =
+  let compose_with acc (v,tt) =
+    Subst.add v (substitute_tt s1 tt) acc
+  in
+  List.fold_left compose_with s1 (Subst.bindings s2)
+
+(* Operations on type terms *)
+
 module VarSet = Set.Make(struct type t = vartype let compare = compare end)
-module ConstrSet = Set.Make(struct type t = typ_constr let compare = compare end)
 
 let fresh_var =
   let next = ref 0 in
@@ -56,17 +82,9 @@ let tt_occurs_check_fail tt1 tt2 =
   | TtVar v, tt -> tt_contains_var v tt
   | _, _ -> false
 
-let rec substitute_tt v tt tt_src =
-  match tt_src with
-  | TtVar v' when v = v' -> tt
-  | TtVar v' -> TtVar v'
-  | TtPair (a,b) -> TtPair (substitute_tt v tt a, substitute_tt v tt b)
-  | TtArrow (a,b) -> TtArrow (substitute_tt v tt a, substitute_tt v tt b)
-  | TtConstant c -> TtConstant c
-
-let substitute_constr v tt constr =
+let substitute_constr s constr =
   match constr with
-  | Eq (tt1, tt2) -> Eq (substitute_tt v tt tt1, substitute_tt v tt tt2)
+  | Eq (tt1, tt2) -> Eq (substitute_tt s tt1, substitute_tt s tt2)
 
 let eqs_splittable tt1 tt2 =
 match tt1, tt2 with
@@ -79,42 +97,26 @@ let split_eqs tt1 tt2 =
     [ Eq (a,c) ; Eq (b,d) ]
   | _ -> assert false
 
+(* Unification *)
+
 exception NoSolution
-exception Simplified of ConstrSet.t
-exception NothingDone of ConstrSet.t
 
-let simplify_constraints cs =
-  let rec simplify cs c =
-    match c with
-    | Eq (t,t') when tt_conflict t t'          -> raise NoSolution
-    | Eq (t,t') when tt_occurs_check_fail t t' -> raise NoSolution
-    | Eq (t,t') when t=t' -> (* Remove *)
-      let cs = ConstrSet.remove c cs in
-      raise (Simplified cs)
-    | Eq (t,t') when eqs_splittable t t' -> (* Decompose *)
-      let cs = ConstrSet.remove c cs in
-      let cs = ConstrSet.union (ConstrSet.of_list (split_eqs t t')) cs in
-      raise (Simplified cs)
-    | Eq (t, TtVar v) when (match t with TtVar _ -> false | _ -> true) -> (* Swap *)
-      let cs = ConstrSet.remove c cs in
-      let cs = ConstrSet.add (Eq (TtVar v, t)) cs in
-      raise (Simplified cs)
-    | Eq (TtVar v, t) when not (tt_contains_var v t) -> (* Eliminate *)
-      if ConstrSet.exists (constr_contains_var v) (ConstrSet.remove c cs)
-      then (
-        let cs = ConstrSet.map (substitute_constr v t) cs in
-        raise (Simplified cs)
-      )
-    | _ -> ()
-  in
-  try (
-    ConstrSet.iter (simplify cs) cs ;
-    raise (NothingDone cs)
-  ) with Simplified cs -> cs
-
-let rec unify cs =
-  try unify (simplify_constraints cs)
-  with NothingDone cs -> cs
+let rec mgu cs =
+  match cs with
+  | [] -> id_subst
+  | (Eq (t,t'))::_ when tt_conflict t t'          -> raise NoSolution         (* Conflict *)
+  | (Eq (t,t'))::_ when tt_occurs_check_fail t t' -> raise NoSolution         (* Occurs check *)
+  | (Eq (t,t'))::cs when t=t' ->                                              (* Remove *)
+    mgu cs
+  | (Eq (t,t'))::cs when eqs_splittable t t' ->                               (* Decompose *)
+    mgu ((split_eqs t t')@cs)
+  | (Eq (t, TtVar v))::cs when (match t with TtVar _ -> false | _ -> true) -> (* Swap *)
+    mgu ((Eq (TtVar v, t))::cs)
+  | (Eq (TtVar v, t))::cs when not (tt_contains_var v t) ->                   (* Eliminate *)
+    let s = singleton v t in
+    let cs = List.map (substitute_constr s) cs in
+    compose_subst (mgu cs) s
+  | _ -> assert false
 
 let rec closed_typ_term_to_typ tt =
   match tt with
