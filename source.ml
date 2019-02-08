@@ -13,7 +13,7 @@ type program_with_locations =
   (binding located * term' located) list
 
 and untyped_program =
-  (untyped_binding located * untyped_term) list
+  (untyped_binding located * untyped_term located) list
 
 and program =
   (binding * term) list

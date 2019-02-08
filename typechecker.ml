@@ -43,6 +43,13 @@ let string_of_type t =
 
 module IdMap = Map.Make(struct type t = identifier let compare = compare end)
 
+let type_of_lit _ = TyConstant TyFloat
+let type_of_prim prim =
+   match prim with
+   | Sin | Cos | Exp | Inv | Neg -> TyArrow (TyConstant TyFloat, TyConstant TyFloat)
+   | Add | Mul -> (* According to the parser, it seems to be in curried form. *)
+      TyArrow (TyConstant TyFloat, TyArrow (TyConstant TyFloat, TyConstant TyFloat))
+
 let rec type_of_term (env:typ IdMap.t) (term_loc:term' Position.located) : typ =
    let pos = term_loc.position in
    let term = term_loc.value in
@@ -85,14 +92,9 @@ let rec type_of_term (env:typ IdMap.t) (term_loc:term' Position.located) : typ =
       | TyPair (_,typ2) -> typ2
       end
 
-   | Literal lit -> TyConstant TyFloat
+   | Literal lit -> type_of_lit lit
 
-   | Primitive prim ->
-      begin match prim with
-      | Sin | Cos | Exp | Inv | Neg -> TyArrow (TyConstant TyFloat, TyConstant TyFloat)
-      | Add | Mul -> (* According to the parser, it seems to be in curried form. *)
-         TyArrow (TyConstant TyFloat, TyArrow (TyConstant TyFloat, TyConstant TyFloat))
-      end
+   | Primitive prim -> type_of_prim prim
 
 (** [check_program source] returns [source] if it is well-typed or
    reports an error if it is not. *)

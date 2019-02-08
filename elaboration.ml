@@ -119,6 +119,16 @@ let rec closed_typ_term_to_typ tt =
 (* ----- ELABORATION USING A KIND OF W-- ALGORITHM ----- *)
 
 let rec w env (t:untyped_term) = (* Returns (subst, type term) *)
-  failwith "TODO"
+  match t with
+  | Var id -> failwith "TODO"
+  | App (u,v) -> failwith "TODO"
+  | Lam ((typ_opt,typ_id),t) -> failwith "TODO"
+  | Pair (u,v) -> failwith "TODO"
+  | Fst t -> failwith "TODO"
+  | Snd t -> failwith "TODO"
+  | Literal lit ->
+    (id_subst, Typechecker.type_of_lit lit)
+  | Primitive p ->
+    (id_subst, Typechecker.type_of_prim p)
 
 
