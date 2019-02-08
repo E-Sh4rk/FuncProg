@@ -18,14 +18,14 @@ let id_subst = Subst.empty
 
 let singleton v k = Subst.singleton v k
 
-let substitue_var s v =
+let substitute_var s v =
   if Subst.mem v s
   then Subst.find v s
   else TtVar v
 
 let rec substitute_tt s tt =
   match tt with
-  | TtVar v -> substitue_var s v
+  | TtVar v -> substitute_var s v
   | TtPair (a,b) -> TtPair (substitute_tt s a, substitute_tt s b)
   | TtArrow (a,b) -> TtArrow (substitute_tt s a, substitute_tt s b)
   | TtConstant c -> TtConstant c
@@ -109,6 +109,12 @@ let rec mgu cs =
     compose_subst (mgu cs) s
   | _ -> assert false
 
+let rec typ_to_typ_term t =
+  match t with
+  | TyConstant c -> TtConstant c
+  | TyArrow (t1,t2) -> TtArrow (typ_to_typ_term t1, typ_to_typ_term t2)
+  | TyPair (t1,t2) -> TtPair (typ_to_typ_term t1, typ_to_typ_term t2)
+
 let rec closed_typ_term_to_typ tt =
   match tt with
   | TtVar _ -> assert false
@@ -118,17 +124,45 @@ let rec closed_typ_term_to_typ tt =
 
 (* ----- ELABORATION USING A KIND OF W-- ALGORITHM ----- *)
 
+module IdMap = Typechecker.IdMap
+
+(*
+Arguments:
+  - [env] : The current environment, mapping variables to type term
+  - [t] : A partially typed term
+
+Output: (subst, type)
+  - [subst] : A substitution that witnesses the returned type term [type].
+  Type checking [t] using [env] composed with the substitution [subst] should give the type [type].
+  - [type] : A type term for the term [t]
+*)
 let rec w env (t:untyped_term) = (* Returns (subst, type term) *)
   match t with
-  | Var id -> failwith "TODO"
+  | Var id -> (id_subst, IdMap.find id env)
+
   | App (u,v) -> failwith "TODO"
-  | Lam ((typ_opt,typ_id),t) -> failwith "TODO"
+
+  | Lam ((var_id, (typ_opt,typ_id)),t_loc) ->
+
+    let typ = begin match typ_opt with
+      | None -> TtVar typ_id
+      | Some typ -> typ_to_typ_term typ
+    end in
+    
+    let env' = IdMap.add var_id typ env in
+    let (subst, right_t) = w env' t_loc.value in
+    (subst, TtArrow (substitute_tt subst typ, right_t))
+
   | Pair (u,v) -> failwith "TODO"
+
   | Fst t -> failwith "TODO"
+
   | Snd t -> failwith "TODO"
+
   | Literal lit ->
-    (id_subst, Typechecker.type_of_lit lit)
+    (id_subst, typ_to_typ_term (Typechecker.type_of_lit lit))
+
   | Primitive p ->
-    (id_subst, Typechecker.type_of_prim p)
+    (id_subst, typ_to_typ_term (Typechecker.type_of_prim p))
 
 
