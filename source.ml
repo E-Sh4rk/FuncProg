@@ -3,25 +3,30 @@ open Position
 type program_with_locations =
   (binding located * term' located) list
 
+and untyped_program =
+  (((typ option) binding') located * untyped_term) list
+
 and program =
   (binding * term) list
 
 (*and program_with_type =
   (binding * typed_term) list*)
 
-and 't t =
+and ('typ, 't) t =
   | Var of identifier
   | App of 't * 't
-  | Lam of binding * 't
+  | Lam of ('typ binding') * 't
   | Pair of 't * 't
   | Fst of 't
   | Snd of 't
   | Literal of literal
   | Primitive of primitive
 
-and term' = term' Position.located t
+and term' = (typ, term' Position.located) t
 
-and term = term t
+and term = (typ, term) t
+
+and untyped_term = (typ option, untyped_term Position.located) t
 
 (*and 'a type_annot =
     {
@@ -31,7 +36,9 @@ and term = term t
 
 and typed_term = typed_term type_annot t*)
 
-and binding = identifier * typ
+and 'typ binding' = identifier * 'typ
+
+and binding = typ binding'
 
 and typ =
   | TyConstant of type_constant
@@ -145,6 +152,6 @@ PPrintEngine.(
     Buffer.contents b
 )
 
-let string_of_term' = string_of_term Position.value
+let string_of_term' (t':term') : string = string_of_term Position.value t'
 
-let string_of_term = string_of_term (fun x -> x)
+let string_of_term (t:term) : string = string_of_term (fun x -> x) t
