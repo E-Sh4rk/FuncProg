@@ -1,10 +1,19 @@
 open Position
 
+type vartype = int
+
+let fresh_vartype =
+  let next = ref 0 in
+  begin fun () -> 
+    next := !next+1 ;
+    !next - 1
+  end
+
 type program_with_locations =
   (binding located * term' located) list
 
 and untyped_program =
-  (((typ option) binding') located * untyped_term) list
+  (untyped_binding located * untyped_term) list
 
 and program =
   (binding * term) list
@@ -26,7 +35,7 @@ and term' = (typ, term' Position.located) t
 
 and term = (typ, term) t
 
-and untyped_term = (typ option, untyped_term Position.located) t
+and untyped_term = (typ_opt, untyped_term Position.located) t
 
 (*and 'a type_annot =
     {
@@ -37,6 +46,10 @@ and untyped_term = (typ option, untyped_term Position.located) t
 and typed_term = typed_term type_annot t*)
 
 and 'typ binding' = identifier * 'typ
+
+and typ_opt = typ option * vartype
+
+and untyped_binding = typ_opt binding'
 
 and binding = typ binding'
 

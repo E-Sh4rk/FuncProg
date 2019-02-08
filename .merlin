@@ -1,0 +1,13 @@
+B /home/Mick/.opam/4.07.0/lib/base
+B /home/Mick/.opam/4.07.0/lib/base/caml
+B /home/Mick/.opam/4.07.0/lib/base/shadow_stdlib
+B /home/Mick/.opam/4.07.0/lib/pprint
+B /home/Mick/.opam/4.07.0/lib/sexplib0
+B _build/default/.joujou.eobjs
+S /home/Mick/.opam/4.07.0/lib/base
+S /home/Mick/.opam/4.07.0/lib/base/caml
+S /home/Mick/.opam/4.07.0/lib/base/shadow_stdlib
+S /home/Mick/.opam/4.07.0/lib/pprint
+S /home/Mick/.opam/4.07.0/lib/sexplib0
+S .
+FLG -rectypes

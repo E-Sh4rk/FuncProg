@@ -2,8 +2,6 @@ open Source
 
 (* ----- UNIFICATION ----- *)
 
-type vartype = int
-
 type typ_term = 
   | TtVar of vartype
   | TtConstant of type_constant
@@ -41,13 +39,6 @@ let compose_subst s1 s2 =
 (* Operations on type terms *)
 
 module VarSet = Set.Make(struct type t = vartype let compare = compare end)
-
-let fresh_var =
-  let next = ref 0 in
-  begin fun () -> 
-    next := !next+1 ;
-    !next - 1
-  end
 
 let rec vars_in_tt tt =
   match tt with
@@ -127,7 +118,7 @@ let rec closed_typ_term_to_typ tt =
 
 (* ----- ELABORATION USING A KIND OF W-- ALGORITHM ----- *)
 
-let rec w t = (* Returns (subst, type term) *)
+let rec w env (t:untyped_term) = (* Returns (subst, type term) *)
   failwith "TODO"
 
 
