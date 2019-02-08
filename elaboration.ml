@@ -109,6 +109,10 @@ let rec mgu cs =
     compose_subst (mgu cs) s
   | _ -> assert false
 
+(* ----- ELABORATION USING A KIND OF W-- ALGORITHM ----- *)
+
+module IdMap = Typechecker.IdMap
+
 let rec typ_to_typ_term t =
   match t with
   | TyConstant c -> TtConstant c
@@ -122,9 +126,8 @@ let rec closed_typ_term_to_typ tt =
   | TtPair (tt1,tt2) -> TyPair (closed_typ_term_to_typ tt1, closed_typ_term_to_typ tt2)
   | TtArrow (tt1,tt2) -> TyArrow (closed_typ_term_to_typ tt1, closed_typ_term_to_typ tt2)
 
-(* ----- ELABORATION USING A KIND OF W-- ALGORITHM ----- *)
-
-module IdMap = Typechecker.IdMap
+let substitute_env s env =
+  IdMap.map (substitute_tt s) env
 
 (*
 Arguments:
@@ -136,13 +139,18 @@ Output: (subst, type)
   Type checking [t] using [env] composed with the substitution [subst] should give the type [type].
   - [type] : A type term for the term [t]
 *)
-let rec w env (t:untyped_term) = (* Returns (subst, type term) *)
+let rec w env (t:untyped_term) =
   match t with
   | Var id -> (id_subst, IdMap.find id env)
 
-  | App (u,v) -> failwith "TODO"
+  | App (t,u) ->
+    let (u_subst, u_t) = w env u.value in
+    let (t_subst, t_t) = w (substitute_env u_subst env) t.value in
+    let final_vartype = fresh_vartype () in
+    let mgu_subst = mgu [Eq (t_t, TtArrow (u_t, TtVar final_vartype))] in
+    (compose_subst mgu_subst (compose_subst t_subst u_subst), substitute_var mgu_subst final_vartype)
 
-  | Lam ((var_id, (typ_opt,typ_id)),t_loc) ->
+  | Lam ((var_id, (typ_opt,typ_id)),t) ->
 
     let typ = begin match typ_opt with
       | None -> TtVar typ_id
@@ -150,8 +158,8 @@ let rec w env (t:untyped_term) = (* Returns (subst, type term) *)
     end in
     
     let env' = IdMap.add var_id typ env in
-    let (subst, right_t) = w env' t_loc.value in
-    (subst, TtArrow (substitute_tt subst typ, right_t))
+    let (subst, tt) = w env' t.value in
+    (subst, TtArrow (substitute_tt subst typ, tt))
 
   | Pair (u,v) -> failwith "TODO"
 
