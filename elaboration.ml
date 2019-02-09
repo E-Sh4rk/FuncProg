@@ -91,6 +91,7 @@ let split_eqs tt1 tt2 =
 (* Unification *)
 
 exception NoSolution
+exception UndeclaredIdentifier
 
 let rec mgu cs =
   match cs with
@@ -146,7 +147,10 @@ Output: (subst, type)
 *)
 let rec w env (t:untyped_term) =
   match t with
-  | Var id -> (id_subst, IdMap.find id env)
+  | Var id ->
+    if IdMap.mem id env
+    then (id_subst, IdMap.find id env)
+    else raise UndeclaredIdentifier
 
   | App (t,u) ->
     let (u_subst, u_t) = w env u.value in
