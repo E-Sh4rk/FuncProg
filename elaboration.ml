@@ -197,7 +197,7 @@ let rec w_program env (prog:untyped_program) =
 
   | [(binding,t)] ->
 
-    let (var_id, typ_opt) = binding.value in
+    let (_, typ_opt) = binding.value in
     let typ = typ_opt_to_tt typ_opt in
 
     let (subst, tt) = w env t.value in
@@ -251,3 +251,33 @@ let elaborate_program (prog:untyped_program) =
   in
   List.map convert_binding prog
   
+let convert_program_without_elaboration (prog:untyped_program) =
+  let rec convert_term (t:untyped_term Position.located) : term' Position.located =
+    let term = t.Position.value in
+    let new_term =
+      match term with
+      | Var id -> Var id
+      | App (t1, t2) -> App (convert_term t1, convert_term t2)
+      | Lam ((var_id,typ_opt), t) ->
+        let typ = typ_opt_to_typ typ_opt in
+        Lam ((var_id,typ), convert_term t)
+      | Pair (t1, t2) -> Pair (convert_term t1, convert_term t2)
+      | Fst t -> Fst (convert_term t)
+      | Snd t -> Snd (convert_term t)
+      | Literal lit -> Literal lit
+      | Primitive prim -> Primitive prim
+    in { t with value=new_term }
+  in
+  let convert_binding (binding,t) =
+    let (var_id, typ_opt) = binding.Position.value in
+    let typ = typ_opt_to_typ typ_opt in
+    let new_binding = { binding with value=(var_id,typ) } in
+    (new_binding, convert_term t)
+  in
+  List.map convert_binding prog
+
+let program : untyped_program -> program_with_locations = fun source ->
+  if !Options.no_elaboration then
+    convert_program_without_elaboration source
+  else
+    elaborate_program source

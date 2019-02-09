@@ -1,7 +1,7 @@
 .PHONY: all clean
 
-JOUJOU_EE=../../joujou --eta-expanse
-JOUJOU=../../joujou --typecheck
+JOUJOU_EE=../../joujou --no-elaboration --eta-expanse
+JOUJOU=../../joujou --no-elaboration --typecheck
 
 GOODS = $(wildcard *-good.j)
 GOODS_ETA = $(wildcard *-eta-good.j)

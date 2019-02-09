@@ -1,3 +1,5 @@
+let no_elaboration = ref false
+
 let typecheck_only = ref false
 
 let eta_expanse_only = ref false
@@ -9,6 +11,9 @@ let simplify = ref true
 let compact = ref false
 
 let options = Arg.([
+  "--no-elaboration", Unit (fun () -> no_elaboration := true),
+  " Do not elaborate. Terms must by type-annoted.";
+
   "--typecheck", Unit (fun () -> typecheck_only := true),
   " Typecheck and stop.";
 
