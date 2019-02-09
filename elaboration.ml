@@ -92,6 +92,7 @@ let split_eqs tt1 tt2 =
 
 exception NoSolution
 exception UndeclaredIdentifier
+exception NoMostGeneralSolution
 
 let rec mgu cs =
   match cs with
@@ -122,7 +123,7 @@ let rec typ_to_typ_term t =
 
 let rec closed_typ_term_to_typ tt =
   match tt with
-  | TtVar _ -> failwith "Type term is not closed. Elaboration seems to have many solutions."
+  | TtVar _ -> raise NoMostGeneralSolution
   | TtConstant c -> TyConstant c
   | TtPair (tt1,tt2) -> TyPair (closed_typ_term_to_typ tt1, closed_typ_term_to_typ tt2)
   | TtArrow (tt1,tt2) -> TyArrow (closed_typ_term_to_typ tt1, closed_typ_term_to_typ tt2)
