@@ -35,8 +35,8 @@
 %token<string> ID
 %token<float> LFLOAT
 
-%type<Source.term'> term
-%start<Source.program_with_locations> program
+%type<Source.untyped_term> term
+%start<Source.untyped_program> program
 
 %right ARROW IN
 %left PLUS
@@ -120,12 +120,11 @@ literal:
   (b, t)
 }
 | LET x=located(identifier) arg=located(binding)
-  COLON oty=typ
   EQUAL t=located(term)
 {
   let pos = Position.position x in
   let x = Position.value x in
-  let b = Position.with_pos pos (x, TyArrow (snd (Position.value arg), oty)) in
+  let b = Position.with_pos pos (x, (None, Source.fresh_vartype ()) ) in
   (b, Position.(with_pos (position t) (make_lambda_abstraction [arg] t)))
 }
 
@@ -135,7 +134,11 @@ literal:
 
 binding: LPAREN x=identifier COLON ty=typ RPAREN
 {
-  (x, ty)
+  (x, (Some ty, Source.fresh_vartype ()))
+}
+| x=identifier
+{
+  (x, (None, Source.fresh_vartype ()))
 }
 
 identifier: x=ID

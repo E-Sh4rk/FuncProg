@@ -1,5 +1,6 @@
 let main =
      IO.parse_input_source_file (Options.get_source_file ())
+  |> Elaboration.elaborate_program
   |> Typechecker.program
   |> Source.remove_locations_in_program
   |> Compiler.source_to_categories

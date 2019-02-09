@@ -195,6 +195,17 @@ let rec w_program env (prog:untyped_program) =
   match prog with
   | [] -> failwith "Can't elaborate an empty program!"
 
+  | [(binding,t)] ->
+
+    let (var_id, typ_opt) = binding.value in
+    let typ = typ_opt_to_tt typ_opt in
+
+    let (subst, tt) = w env t.value in
+    let typ = substitute_tt subst typ in
+
+    let mgu_subst = mgu [Eq (typ, tt)] in
+    compose_subst mgu_subst subst
+
   | (binding,t)::prog -> (* Play the role of a 'let' *)
 
     let (var_id, typ_opt) = binding.value in
@@ -207,11 +218,11 @@ let rec w_program env (prog:untyped_program) =
     let mgu_subst = mgu [Eq (typ, tt1)] in
     let env = substitute_env mgu_subst env in
 
-    let (subst2, tt2) = w_program env prog in
-    (compose_subst subst2 (compose_subst mgu_subst subst1), tt2)
+    let subst2 = w_program env prog in
+    compose_subst subst2 (compose_subst mgu_subst subst1)
 
 let elaborate_program (prog:untyped_program) =
-  let (subst,_) = w_program IdMap.empty prog in
+  let subst = w_program IdMap.empty prog in
   let rec convert_term (t:untyped_term Position.located) : term' Position.located =
     let term = t.Position.value in
     let new_term =
