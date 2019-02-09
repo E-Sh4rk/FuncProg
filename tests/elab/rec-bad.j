@@ -1,2 +1,2 @@
 
-let (id : float -> float) = fun (x : float) -> id x
+let (id : float -> float) = fun x -> id x

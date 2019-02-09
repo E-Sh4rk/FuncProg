@@ -1,2 +1,2 @@
 let (apply : (float -> float) -> float -> float) =
-  fun (f : float -> float) -> fun (x : float) -> f (x)
+  fun f -> fun x -> f (x)

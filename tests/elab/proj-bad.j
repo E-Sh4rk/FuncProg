@@ -1,2 +1,2 @@
 
-let (wrong : float -> float) = fun (x : float) -> fst sin
+let wrong = fun (x:float) -> fst sin

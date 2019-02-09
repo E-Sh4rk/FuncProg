@@ -1,4 +1,4 @@
 
-let (sqr : float -> float) = fun (x : float) -> x * x
+let sqr = fun x -> x * x
 
-let (main : float) = sqr sin
+let main = sqr sin
