@@ -119,6 +119,15 @@ literal:
 {
   (b, t)
 }
+| LET x=located(identifier) arg=located(typed_binding)
+  COLON oty=typ
+  EQUAL t=located(term)
+{
+  let pos = Position.position x in
+  let x = Position.value x in
+  let b = Position.with_pos pos (x, (Some (TyArrow (typ_opt_to_typ (snd (Position.value arg)), oty)), Source.fresh_vartype ())) in
+  (b, Position.(with_pos (position t) (make_lambda_abstraction [arg] t)))
+}
 | LET x=located(identifier) arg=located(binding)
   EQUAL t=located(term)
 {
@@ -132,9 +141,14 @@ literal:
 | PLUS  { Add }
 | TIMES { Mul }
 
-binding: LPAREN x=identifier COLON ty=typ RPAREN
+typed_binding: LPAREN x=identifier COLON ty=typ RPAREN
 {
   (x, (Some ty, Source.fresh_vartype ()))
+}
+
+binding: tb=typed_binding
+{
+  tb
 }
 | x=identifier
 {

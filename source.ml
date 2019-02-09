@@ -72,6 +72,11 @@ and identifier = Id of string
 
 and type_identifier = TyId of string
 
+let typ_opt_to_typ (opt,_) =
+  match opt with
+  | None -> failwith "Typing annotations expected!"
+  | Some opt -> opt
+
 let rec map f = function
   | App (a, b) -> App (f (map f a), f (map f b))
   | Lam (b, t) -> Lam (b, f (map f t))
