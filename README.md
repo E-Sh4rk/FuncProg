@@ -13,7 +13,8 @@ néanmoins il a également été nécessaire de modifier le fichier `source.ml` 
 J'ai également modifié le fichier `options.ml` afin de pouvoir désactiver l'élaborateur si besoin (j'en ai besoin pour les tests de la task-2, qui sont censés tester le type-checker et non l'élaborateur, bien qu'il réussisse également les tests). J'ai d'ailleurs ajouté des tests pour l'élaborateur, ils sont situées dans `tests/elab` (ils fonctionnent de manière similaire aux tests de la task-2).
 
 La structure globale de mon code concernant le typage est la suivante:  
-Code source -Lexer/Parser-> `untyped_program` -Elaborateur-> `program_with_locations` -Typechecker-> `program_with_locations` (vérifié)  
+`source code` -Lexer/Parser-> `untyped_program` -Elaborateur->  
+`program_with_locations` -Typechecker-> `program_with_locations` (vérifié)  
 avec `untyped_program` représentant les programmes avec annotations de type partielles (+ annotations de localisation).
 
 Concernant l'implémentation:
@@ -21,8 +22,24 @@ Concernant l'implémentation:
 - Pour l'unification, j'ai utilisé l'algorithme présenté dans les slides du cours sur l'inférence de type
 - Pour l'élaboration, j'ai utilisé une version un peu simplifiée de l'algorithme W, lui aussi présenté dans les slides du cours. En effet, notre langage ne possédant pas de polymorphisme, les cas d'une variable et du `let` peuvent etre légeremment simplifiés. J'ai d'ailleurs été un peu surpris par le fait que l'absence de polymorphisme ne simplifie pas tellement les choses (un petit peu comme je l'ai dit, mais pour autant je n'ai pas trouvé d'algorithme plus simple que l'algorithme W).
 
-Comportement: annotations de types prises en compte
-Si pas de solution la plus général, erreur (lister les 3 erreurs)
+Quelques remarques supplémentaires:
+
+- L'utilisateur peut toujours annoter des types s'il le désire (que ce soit
+  le type d'une variable dans une lambda abstraction ou le type d'un terme toplevel). Ces annotations sont prises en compte par l'élaborateur.
+- Contrairement au type checker, en cas d'échec, l'élaborateur ne renverra pas de message d'erreur précis (avec la ligne et l'expression fautive). En revanche, il peut tout de meme renvoier trois types d'erreur différentes:
+  - `UndeclaredIdentifier` si un identifier non déclaré est utilisé
+  - `NoSolution` si le programme n'est pas typable (en prenant en compte les annotations de type de l'utilisateur)
+  - `NoMostGeneralSolution` si il existe des solutions, mais aucune solution la plus générale. Cela peut se produire à cause de l'absence de polymorphisme. Voir ci-dessous.
+
+Voici trois exemples de code assez similaire, mais le premier n'est pas accepté par mon élaborateur:
+  - `most-general-bad.j` : `let id = fun x -> x`
+  - `most-general-good.j` : `let id = fun x -> x in let cst = id 0.5`
+  - `most-general2-good.j` : `let id = fun (x:float) -> x`
+
+En effet, le premier exemple ne possède pas de solution la plus générale:
+`id` pourrait etre typé `float -> float`, mais aussi `(float -> float) -> (float -> float)` et ainsi de suite. Sans polymorphisme, aucune solution n'est plus générale et mon élaborateur refuse donc ce programme.
+
+Dans les deux exemples suivants en revanche, un seul typage est possible, soit de par l'utilisation faite de la fonction `id` qui permet de déterminer son type, soit de par les annotations de l'utilisateur.
 
 ## Optimisations
 
