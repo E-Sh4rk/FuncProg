@@ -34,12 +34,12 @@ let train : training_set -> net = fun tset ->
   while !last_error >= acceptable_error
   do
     let train_on tset =
-      let (input,exp) = tset in
-      let entry = ((input, !res), exp) in
-      let entry_eps_1 = (((0.,0.),(!last_error *. eps, 0.)),0.) in
-      let entry_eps_2 = (((0.,0.),(0., !last_error *. eps)),0.) in
-      let diff1 = DiffCat.epsilon_dapply Diff.error entry entry_eps_1 in
-      let diff2 = DiffCat.epsilon_dapply Diff.error entry entry_eps_2 in
+      let (inputs,exp) = tset in
+      let args = ((inputs, !res), exp) in
+      let weight1 = (((0.,0.),(!last_error *. eps, 0.)),0.) in
+      let weight2 = (((0.,0.),(0., !last_error *. eps)),0.) in
+      let diff1 = DiffCat.epsilon_dapply Diff.error args weight1 in
+      let diff2 = DiffCat.epsilon_dapply Diff.error args weight2 in
       res := update_net (!res) (-.diff1) (-.diff2)
     
     in List.iter train_on tset ;
